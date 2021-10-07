@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract FeeManager is Ownable {
+contract FeeOracle is Ownable {
 
     mapping(address => uint256) public feeFixed;
     uint256 public feeRateBP;
@@ -21,7 +21,7 @@ contract FeeManager is Ownable {
         feeRateBP = feeRateBP_;
     }
 
-    function fee(address token, address sender, uint256 amount) public view returns (uint256) {
+    function fee(address token, address sender, uint256 amount, bytes4 destination) public view returns (uint256) {
         if (IERC20(poolToken).balanceOf(sender) >= balanceFeeFixed) {
             return feeFixed[token];
         }

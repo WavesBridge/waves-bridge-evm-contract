@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2018"],
+    "module": "CommonJS",
+    "target": "ES2018",
+    "inlineSourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "noImplicitAny": false,
+    "types": ["@types/node", "@types/chai", "@types/mocha", "truffle-contracts"],
+    "typeRoots": ["./node_modules/@types", "./types"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "build", "cache", "artifacts"]
+}

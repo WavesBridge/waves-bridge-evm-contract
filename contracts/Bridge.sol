@@ -6,15 +6,27 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WrappedToken.sol";
-import "./FeeManager.sol";
+import "./FeeOracle.sol";
 import "./interfaces/IValidator.sol";
 import "./interfaces/IWrappedTokenV0.sol";
 
-contract Bridge is Ownable {
+
+contract Bridge is AccessControl {
     using SafeERC20 for IERC20;
 
+    bytes32 public constant FEE_ORACLE_MANAGER = keccak256("FEE_ORACLE_MANAGER");
+    bytes32 public constant FEE_COLLECTOR_MANAGER = keccak256("FEE_COLLECTOR_MANAGER");
+    bytes32 public constant TOKEN_MANAGER = keccak256("TOKEN_MANAGER");
+    bytes32 public constant VALIDATOR_MANAGER = keccak256("VALIDATOR_MANAGER");
+    bytes32 public constant START_MANAGER = keccak256("START_MANAGER");
+    bytes32 public constant STOP_MANAGER = keccak256("STOP_MANAGER");
+
+    bool active;
+
     enum TokenType {
+        Base,
         Native,
         WrappedV0,
         Wrapped
@@ -30,6 +42,7 @@ contract Bridge is Ownable {
         uint256 indexed lockId,
         bytes4 destination
     );
+    event Received(address indexed recipient, address token, uint256 amount, uint256 indexed lockId, bytes4 source);
 
     // Validator contract address
     address public validator;
@@ -38,13 +51,10 @@ contract Bridge is Ownable {
     address public feeCollector;
 
     // Fee manager address
-    address public feeManager;
+    address public feeOracle;
 
     // Id of the blockchain
     bytes4 public blockchainId;
-
-    // Native WETH address
-    address public WETH;
 
     // Structure for token info
     struct TokenInfo {
@@ -57,18 +67,26 @@ contract Bridge is Ownable {
     // Map to get token info by its address
     mapping(address => TokenInfo) public tokenInfos;
 
+    // Structure for getting tokenAddress by tokenSource and tokenSourceAddress
+    // tokenSource => tokenSourceAddress => nativeAddress
+    mapping(bytes4 => mapping(bytes32 => address)) public tokenSourceMap;
+
+    modifier isActive() {
+        require(active, "Bridge: is not active");
+        _;
+    }
+
     constructor(
         bytes4 blockchainId_,
         address feeCollector_,
-        address feeManager_,
-        address validator_,
-        address WETH_
+        address admin_,
+        address validator_
     ) {
         blockchainId = blockchainId_;
         feeCollector = feeCollector_;
-        feeManager = feeManager_;
         validator = validator_;
-        WETH = WETH_;
+        _setupRole(DEFAULT_ADMIN_ROLE, admin_);
+        active = false;
     }
 
     // Method to lock tokens
@@ -77,7 +95,7 @@ contract Bridge is Ownable {
         uint256 amount,
         bytes32 recipient,
         bytes4 destination
-    ) external {
+    ) external isActive {
         (uint256 amountToLock, uint256 fee, TokenInfo memory tokenInfo) = _createLock(
             tokenAddress,
             amount,
@@ -92,14 +110,11 @@ contract Bridge is Ownable {
                 address(this),
                 amountToLock
             );
-        } else if (tokenInfo.tokenType == TokenType.WrappedV0) {
+        } else if (tokenInfo.tokenType == TokenType.WrappedV0 || tokenInfo.tokenType == TokenType.Wrapped) {
             // Legacy wrapped tokens burn
             IWrappedTokenV0(tokenAddress).burn(msg.sender, amountToLock);
-        } else if (tokenInfo.tokenType == TokenType.Wrapped) {
-            // If token is wrapped - burn tokens
-            WrappedToken(tokenAddress).burn(msg.sender, amountToLock);
         } else {
-            revert("Unknown token type");
+            revert("Invalid token type");
         }
 
         if (fee > 0) {
@@ -112,18 +127,118 @@ contract Bridge is Ownable {
         }
     }
 
-    function lockEth(bytes32 recipient, bytes4 destination) external payable {
-        (, uint256 fee, ) = _createLock(
-            WETH,
+    function lockBase(bytes32 recipient, bytes4 destination, address wrappedBaseTokenAddress) external payable isActive{
+        (, uint256 fee, TokenInfo memory tokenInfo) = _createLock(
+            wrappedBaseTokenAddress,
             msg.value,
             recipient,
             destination
         );
 
+        require(tokenInfo.tokenType == TokenType.Base, "Invalid token type");
+
         if (fee > 0) {
             // If there is fee - transfer ETH to fee collector address
             payable(feeCollector).transfer(fee);
         }
+    }
+
+    // Method unlock funds. Amount has to be in system precision
+    function unlock(
+        uint256 lockId,
+        address recipient, uint256 amount,
+        bytes4 lockSource, bytes4 tokenSource,
+        bytes32 tokenSourceAddress,
+        bytes calldata signature) external isActive{
+        // Create message hash and validate the signature
+        require(IValidator(validator).createUnlock(
+                lockId,
+                    recipient,
+                    amount,
+                    lockSource,
+                    tokenSource,
+                    tokenSourceAddress,
+                    signature), "Bridge: validation failed");
+
+        // Mark lock as received
+        address tokenAddress = tokenSourceMap[tokenSource][tokenSourceAddress];
+        require(tokenAddress != address(0), "Bridge: unsupported token");
+        TokenInfo memory tokenInfo = tokenInfos[tokenAddress];
+
+        // Transform amount form system to token precision
+        uint256 amountWithTokenPrecision = fromSystemPrecision(amount, tokenInfo.precision);
+
+        if (tokenInfo.tokenType == TokenType.Base) {
+            // If token is WETH - transfer ETH
+            payable(recipient).transfer(amountWithTokenPrecision);
+        } else if (tokenInfo.tokenType == TokenType.Native) {
+            // If token is native - transfer the token
+            IERC20(tokenAddress).safeTransfer(recipient, amountWithTokenPrecision);
+        } else if (tokenInfo.tokenType == TokenType.Wrapped || tokenInfo.tokenType == TokenType.WrappedV0) {
+            // Else token is wrapped - mint tokens to the user
+            WrappedToken(tokenAddress).mint(recipient, amountWithTokenPrecision);
+        }
+
+        emit Received(recipient, tokenAddress, amountWithTokenPrecision, lockId, lockSource);
+    }
+
+    // Method to add token that already exist in the current blockchain
+    // Fee has to be in system precision
+    // If token is wrapped, but it was deployed manually, isManualWrapped must be true
+    function addToken(bytes4 tokenSource, bytes32 tokenSourceAddress, address nativeTokenAddress, TokenType tokenType) external onlyRole(TOKEN_MANAGER) {
+        require(
+            tokenInfos[nativeTokenAddress].tokenSourceAddress == bytes32(0) &&
+            tokenSourceMap[tokenSource][tokenSourceAddress] == address(0), "Bridge: exists");
+        uint8 precision = ERC20(nativeTokenAddress).decimals();
+
+        tokenSourceMap[tokenSource][tokenSourceAddress] = nativeTokenAddress;
+        tokenInfos[nativeTokenAddress] = TokenInfo(tokenSource, tokenSourceAddress, precision, tokenType);
+    }
+
+    // Method to remove token from lists
+    function removeToken(bytes4 tokenSource, bytes32 tokenSourceAddress, address newAuthority) external onlyRole(TOKEN_MANAGER) {
+        require(newAuthority != address(0), "Bridge: zero address authority");
+        address tokenAddress = tokenSourceMap[tokenSource][tokenSourceAddress];
+        require(tokenAddress != address(0), "Bridge: token not found");
+        TokenInfo memory tokenInfo = tokenInfos[tokenAddress];
+
+        if (tokenInfo.tokenType == TokenType.Base && address(this).balance > 0) {
+            payable(newAuthority).transfer(address(this).balance);
+        }
+
+        uint256 tokenBalance = IERC20(tokenAddress).balanceOf(address(this));
+        if (tokenBalance > 0) {
+            IERC20(tokenAddress).safeTransfer(newAuthority, tokenBalance);
+        }
+
+        if (tokenInfo.tokenType == TokenType.Wrapped) {
+            WrappedToken(tokenAddress).transferOwnership(newAuthority);
+        } else if (tokenInfo.tokenType == TokenType.WrappedV0) {
+            IWrappedTokenV0(tokenAddress).changeAuthority(newAuthority);
+        }
+
+        delete tokenInfos[tokenAddress];
+        delete tokenSourceMap[tokenSource][tokenSourceAddress];
+    }
+
+    function setFeeOracle(address _feeOracle) external onlyRole(FEE_ORACLE_MANAGER) {
+        feeOracle = _feeOracle;
+    }
+
+    function setFeeCollector(address _feeCollector) external onlyRole(FEE_COLLECTOR_MANAGER) {
+        feeCollector = _feeCollector;
+    }
+
+    function setValidator(address _validator ) external onlyRole(VALIDATOR_MANAGER) {
+        validator = _validator;
+    }
+
+    function startBridge() external onlyRole(START_MANAGER) {
+        active = true;
+    }
+
+    function stopBridge() external onlyRole(STOP_MANAGER) {
+        active = false;
     }
 
     // Private method to validate lock, create lock record, and emmit the event
@@ -142,7 +257,7 @@ contract Bridge is Ownable {
             "Bridge: unsupported token"
         );
 
-        uint256 fee = FeeManager(feeManager).fee(tokenAddress, msg.sender, amount);
+        uint256 fee = FeeOracle(feeOracle).fee(tokenAddress, msg.sender, amount, destination);
 
         require(amount > fee, "Bridge: amount too small");
 
