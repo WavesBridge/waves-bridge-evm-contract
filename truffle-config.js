@@ -1,3 +1,5 @@
+require("ts-node").register({files: true,});
+require('source-map-support').install({hookRequire: true});
 require('dotenv').config();
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
@@ -6,7 +8,7 @@ module.exports = {
     goerli: {
       provider: () => {
         return new HDWalletProvider({
-          privateKeys: [process.env.GOERLI_PK], 
+          privateKeys: [process.env.GOERLI_PK],
           providerOrUrl: 'https://goerli.infura.io/v3/' + process.env.INFURA_KEY
           });
       },
@@ -16,7 +18,7 @@ module.exports = {
     mainnet: {
       provider: function() {
         return new HDWalletProvider({
-          privateKeys: [process.env.MAINNET_PK], 
+          privateKeys: [process.env.MAINNET_PK],
           providerOrUrl: 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY
           });
       },
@@ -27,7 +29,7 @@ module.exports = {
   },
   compilers: {
     solc: {
-      version: "^0.8",  
+      version: "^0.8",
     }
   }
 };

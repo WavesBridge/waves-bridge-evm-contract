@@ -80,11 +80,13 @@ contract Bridge is AccessControl {
         bytes4 blockchainId_,
         address feeCollector_,
         address admin_,
-        address validator_
+        address validator_,
+        address feeOracle_
     ) {
         blockchainId = blockchainId_;
         feeCollector = feeCollector_;
         validator = validator_;
+        feeOracle = feeOracle_;
         _setupRole(DEFAULT_ADMIN_ROLE, admin_);
         active = false;
     }

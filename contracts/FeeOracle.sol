@@ -21,7 +21,7 @@ contract FeeOracle is Ownable {
         feeRateBP = feeRateBP_;
     }
 
-    function fee(address token, address sender, uint256 amount, bytes4 destination) public view returns (uint256) {
+    function fee(address token, address sender, uint256 amount, bytes4) public view returns (uint256) {
         if (IERC20(poolToken).balanceOf(sender) >= balanceFeeFixed) {
             return feeFixed[token];
         }
