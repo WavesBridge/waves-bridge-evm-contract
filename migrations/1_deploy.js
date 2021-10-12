@@ -10,7 +10,7 @@ module.exports = async function(deployer, network, addresses) {
   let feeOracle;
   let admin = addresses[0];
   if (network == "test") {
-    await deployer.deploy(Token, "Test Token", "TST");
+    await deployer.deploy(Token, "Test Token", "TST", web3.utils.toWei('1000000'));
     baseToken = (await Token.deployed()).address;
     await deployer.deploy(FeeOracle);
     feeOracle = (await FeeOracle.deployed()).address;
@@ -22,5 +22,5 @@ module.exports = async function(deployer, network, addresses) {
     baseToken = process.env.POOL_BASE_TOKEN;
   }
   console.log(`Deploying pool for ${baseToken}`);
-  await deployer.deploy(Pool, baseToken);
+  // await deployer.deploy(Pool, baseToken);
 };

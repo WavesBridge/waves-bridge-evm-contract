@@ -54,7 +54,7 @@ contract('Bridge: common flow', (accounts) => {
     feeOracle = await FeeOracle.deployed();
     bridgeA = await Bridge.new(A_NETWORK_HEX, feeCollector, payer, validator.address, feeOracle.address);
     bridgeB = await Bridge.new(B_NETWORK_HEX, feeCollector, payer, validator.address, feeOracle.address);
-    token = await Token.new('token', 'TKN');
+    token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
     await wrappedTokenA.transferOwnership(bridgeA.address);
     await wrappedTokenB.transferOwnership(bridgeB.address);
@@ -387,11 +387,11 @@ contract('Bridge: WETH', (accounts) => {
   const oracle = web3.eth.accounts.create();
 
   before(async () => {
-    WETH = await Token.new('Wrapped ETH', 'WETH');
+    WETH = await Token.new('Wrapped ETH', 'WETH', toWei('1000000'));
     validator = await Validator.deployed();
     feeOracle = await FeeOracle.deployed();
     bridgeA = await Bridge.new(A_NETWORK_HEX, feeCollector, payer, validator.address, feeOracle.address);
-    token = await Token.new('token', 'TKN');
+    token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
   });
 
