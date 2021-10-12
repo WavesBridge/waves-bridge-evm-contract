@@ -4,15 +4,12 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // Note that it's ownable and the owner wields tremendous power. The ownership
 // will be transferred to a governance smart contract once REWARD is sufficiently
 // distributed and the community can show to govern itself.
 contract Pool is Ownable {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
     // Info of each user.
     struct UserInfo {
@@ -83,7 +80,7 @@ contract Pool is Ownable {
         }
         uint256 lastRewardBlock =
             block.number > startBlock ? block.number : startBlock;
-        totalAllocPoint = totalAllocPoint.add(_allocPoint);
+        totalAllocPoint += _allocPoint;
         poolInfo.push(
             PoolInfo({
                 lpToken: _lpToken,
@@ -103,9 +100,7 @@ contract Pool is Ownable {
         if (_withUpdate) {
             massUpdatePools();
         }
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
-            _allocPoint
-        );
+        totalAllocPoint = totalAllocPoint - poolInfo[_pid].allocPoint + _allocPoint;
         poolInfo[_pid].allocPoint = _allocPoint;
     }
 
@@ -117,7 +112,7 @@ contract Pool is Ownable {
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public pure returns (uint256)
     {
-        return _to.sub(_from);
+        return _to - _from;
     }
 
     // View function to see pending REWARDs on frontend.
@@ -134,14 +129,10 @@ contract Pool is Ownable {
             uint256 multiplier =
             getMultiplier(pool.lastRewardBlock, block.number);
             uint256 reward =
-            multiplier.mul(rewardPerBlock).mul(pool.allocPoint).div(
-                totalAllocPoint
-            );
-            accRewardPerShare = accRewardPerShare.add(
-                reward.mul(1e12).div(lpSupply)
-            );
+            multiplier * rewardPerBlock * pool.allocPoint / totalAllocPoint;
+            accRewardPerShare += reward * 1e12 / lpSupply;
         }
-        return user.amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
+        return (user.amount * accRewardPerShare / 1e12) - user.rewardDebt;
     }
 
     // Update reward vairables for all pools. Be careful of gas spending!
@@ -164,14 +155,9 @@ contract Pool is Ownable {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 reward =
-        multiplier.mul(rewardPerBlock).mul(pool.allocPoint).div(
-            totalAllocPoint
-        );
+        uint256 reward = multiplier * rewardPerBlock * pool.allocPoint / totalAllocPoint;
 
-        pool.accRewardPerShare = pool.accRewardPerShare.add(
-            reward.mul(1e12).div(lpSupply)
-        );
+        pool.accRewardPerShare += reward * 1e12 / lpSupply;
         pool.lastRewardBlock = block.number;
     }
 
@@ -181,10 +167,7 @@ contract Pool is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending =
-            user.amount.mul(pool.accRewardPerShare).div(1e12).sub(
-                user.rewardDebt
-            );
+            uint256 pending = (user.amount * pool.accRewardPerShare / 1e12) - user.rewardDebt;
             rewardToken.safeTransfer(msg.sender, pending);
         }
         pool.lpToken.safeTransferFrom(
@@ -192,8 +175,8 @@ contract Pool is Ownable {
             address(this),
             _amount
         );
-        user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accRewardPerShare).div(1e12);
+        user.amount += _amount;
+        user.rewardDebt = user.amount * pool.accRewardPerShare / 1e12;
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -203,13 +186,10 @@ contract Pool is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
-        uint256 pending =
-            user.amount.mul(pool.accRewardPerShare).div(1e12).sub(
-                user.rewardDebt
-            );
+        uint256 pending = (user.amount * pool.accRewardPerShare / 1e12) - user.rewardDebt;
         rewardToken.safeTransfer(msg.sender, pending);
-        user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accRewardPerShare).div(1e12);
+        user.amount -= _amount;
+        user.rewardDebt = user.amount * pool.accRewardPerShare / 1e12;
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
         emit Withdraw(msg.sender, _pid, _amount);
     }
