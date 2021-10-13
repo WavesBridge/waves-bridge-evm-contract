@@ -9,6 +9,8 @@ import "./Pool.sol";
 
 contract FeeOracle is Ownable {
     using Math for uint256;
+
+    mapping(address => uint256) public minFee;
     mapping(uint256 => uint256) public multipliers;
     uint256 public baseFeeRateBP;
 
@@ -25,19 +27,30 @@ contract FeeOracle is Ownable {
         multipliers[pid] = multiplier;
     }
 
+    function setMinFee(address token, uint256 _minFee) public onlyOwner {
+        minFee[token] = _minFee;
+    }
+
 
     function fee(address token, address sender, uint256 amount, bytes4) public view returns (uint256) {
         uint256 poolLength = pool.poolLength();
         uint256 userShare = 0;
         for (uint256 pid = 0; pid < poolLength; pid++) {
-            uint256 poolSize = IERC20(token).balanceOf(address(pool));
+            (IERC20 lpToken,,,) = pool.poolInfo(pid);
+            uint256 poolSize = lpToken.balanceOf(address(pool));
             if (poolSize > 0) {
                 (uint256 lpAmount,) = pool.userInfo(pid, sender);
                 userShare = userShare.max(multipliers[pid] * lpAmount / poolSize);
             }
         }
 
-        return amount / (userShare + (BP / baseFeeRateBP));
+        uint256 result = amount / (userShare + (BP / baseFeeRateBP));
+        uint256 _minFee = minFee[token];
+        if (_minFee > 0 && result < _minFee) {
+            return _minFee;
+        } else {
+            return result;
+        }
     }
 
 }
