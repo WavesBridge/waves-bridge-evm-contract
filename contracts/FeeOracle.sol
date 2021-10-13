@@ -4,28 +4,40 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./Pool.sol";
 
 contract FeeOracle is Ownable {
-
-    mapping(address => uint256) public feeFixed;
-    uint256 public feeRateBP;
+    using Math for uint256;
+    mapping(uint256 => uint256) public multipliers;
+    uint256 public baseFeeRateBP;
 
     uint256 public constant BP = 10000;
 
-    address public poolToken;
-    uint256 public balanceFeeFixed;
+    Pool public pool;
 
-    constructor(address poolToken_, uint256 balanceFeeFixed_, uint256 feeRateBP_) {
-        poolToken = poolToken_;
-        balanceFeeFixed = balanceFeeFixed_;
-        feeRateBP = feeRateBP_;
+    constructor(Pool pool_, uint256 feeRateBP_) {
+        pool = pool_;
+        baseFeeRateBP = feeRateBP_;
     }
 
+    function setMultiplier(uint256 pid, uint256 multiplier) public onlyOwner {
+        multipliers[pid] = multiplier;
+    }
+
+
     function fee(address token, address sender, uint256 amount, bytes4) public view returns (uint256) {
-        if (IERC20(poolToken).balanceOf(sender) >= balanceFeeFixed) {
-            return feeFixed[token];
+        uint256 poolLength = pool.poolLength();
+        uint256 userShare = 0;
+        for (uint256 pid = 0; pid < poolLength; pid++) {
+            uint256 poolSize = IERC20(token).balanceOf(address(pool));
+            if (poolSize > 0) {
+                (uint256 lpAmount,) = pool.userInfo(pid, sender);
+                userShare = userShare.max(multipliers[pid] * lpAmount / poolSize);
+            }
         }
-        return amount * feeRateBP / BP;
+
+        return amount / (userShare + (BP / baseFeeRateBP));
     }
 
 }
