@@ -18,9 +18,9 @@ contract FeeOracle is Ownable {
 
     Pool public pool;
 
-    constructor(Pool pool_, uint256 feeRateBP_) {
+    constructor(Pool pool_, uint256 baseFeeRateBP_) {
         pool = pool_;
-        baseFeeRateBP = feeRateBP_;
+        baseFeeRateBP = baseFeeRateBP_;
     }
 
     function setMultiplier(uint256 pid, uint256 multiplier) public onlyOwner {
