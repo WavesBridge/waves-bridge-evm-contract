@@ -52,8 +52,8 @@ contract('Bridge: common flow', (accounts) => {
     wrappedTokenA = await WrappedToken.new(A_NETWORK_HEX, wrappedTokenSourceAddress, 18, 'Wrapped', 'WRP');
     validator = await Validator.deployed();
     feeOracle = await FeeOracle.deployed();
-    bridgeA = await Bridge.new(A_NETWORK_HEX, feeCollector, payer, validator.address, feeOracle.address);
-    bridgeB = await Bridge.new(B_NETWORK_HEX, feeCollector, payer, validator.address, feeOracle.address);
+    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address);
+    bridgeB = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address);
     token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
     await wrappedTokenA.transferOwnership(bridgeA.address);
@@ -390,7 +390,7 @@ contract('Bridge: WETH', (accounts) => {
     WETH = await Token.new('Wrapped ETH', 'WETH', toWei('1000000'));
     validator = await Validator.deployed();
     feeOracle = await FeeOracle.deployed();
-    bridgeA = await Bridge.new(A_NETWORK_HEX, feeCollector, payer, validator.address, feeOracle.address);
+    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address);
     token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
   });

@@ -32,12 +32,11 @@ contract("Pool", function (accounts) {
   it("test fee", async function () {
     await lp.approve(pool.address, toWei("25000000"), {from: alice})
     await lp2.approve(pool.address, toWei("25000000"), {from: alice})
-    console.log(1);
+
     let result = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
     expect(+result.toString()).gt(+toWei("0.0029").toString());
     expect(+result.toString()).lt(+toWei("0.0031").toString());
 
-    console.log(2);
     await pool.deposit(0, toWei("100"), {from: alice});
     await pool.deposit(1, toWei("500"), {from: alice}); // Multiplier for pool 1 is 10 times less than for pool 0
     result = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
@@ -45,28 +44,24 @@ contract("Pool", function (accounts) {
     expect(+result.toString()).lt(+toWei("0.0027").toString());
     await pool.withdraw(0, toWei("100"), {from: alice});
 
-    console.log(3);
     await pool.deposit(0, toWei("500"), {from: alice});
     result = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
     expect(+result.toString()).gt(+toWei("0.0017").toString());
     expect(+result.toString()).lt(+toWei("0.0019").toString());
     await pool.withdraw(0, toWei("500"), {from: alice});
 
-    console.log(4);
     await pool.deposit(0, toWei("1000"), {from: alice});
     result = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
     expect(+result.toString()).gt(+toWei("0.0013").toString());
     expect(+result.toString()).lt(+toWei("0.0015").toString());
     await pool.withdraw(0, toWei("1000"), {from: alice});
 
-    console.log(5);
     await pool.deposit(0, toWei("5000"), {from: alice});
     result = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
     expect(+result.toString()).gt(+toWei("0.0004").toString());
     expect(+result.toString()).lt(+toWei("0.00045").toString());
     await pool.withdraw(0, toWei("5000"), {from: alice});
 
-    console.log(6);
     await pool.deposit(0, toWei("25000"), {from: alice});
     result = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
     expect(+result.toString()).gt(+toWei("0.00009").toString());

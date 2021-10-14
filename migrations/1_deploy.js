@@ -16,7 +16,7 @@ module.exports = async function(deployer, network, addresses) {
     feeOracle = (await FeeOracle.deployed()).address;
     await deployer.deploy(Validator);
     validator = (await Validator.deployed()).address;
-    await deployer.deploy(Bridge, web3.utils.asciiToHex("RPS"), admin, admin, validator, feeOracle);
+    await deployer.deploy(Bridge, admin, admin, validator, feeOracle);
 
   } else {
     baseToken = process.env.POOL_BASE_TOKEN;

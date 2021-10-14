@@ -53,9 +53,6 @@ contract Bridge is AccessControl {
     // Fee manager address
     address public feeOracle;
 
-    // Id of the blockchain
-    bytes4 public blockchainId;
-
     // Structure for token info
     struct TokenInfo {
         bytes4 tokenSource;
@@ -77,13 +74,11 @@ contract Bridge is AccessControl {
     }
 
     constructor(
-        bytes4 blockchainId_,
         address feeCollector_,
         address admin_,
         address validator_,
         address feeOracle_
     ) {
-        blockchainId = blockchainId_;
         feeCollector = feeCollector_;
         validator = validator_;
         feeOracle = feeOracle_;
@@ -252,7 +247,6 @@ contract Bridge is AccessControl {
         bytes4 destination
     ) private returns (uint256, uint256, TokenInfo memory) {
         require(amount > 0, "Bridge: amount is 0");
-        require(destination != blockchainId, "Bridge: source chain");
         TokenInfo memory tokenInfo = tokenInfos[tokenAddress];
         require(
             tokenInfo.tokenSourceAddress != bytes32(0),

@@ -35,6 +35,7 @@ contract FeeOracle is Ownable {
     function fee(address token, address sender, uint256 amount, bytes4) public view returns (uint256) {
         uint256 poolLength = pool.poolLength();
         uint256 userShare = 0;
+        //TODO: try to remove for loop
         for (uint256 pid = 0; pid < poolLength; pid++) {
             (IERC20 lpToken,,,) = pool.poolInfo(pid);
             uint256 poolSize = lpToken.balanceOf(address(pool));
