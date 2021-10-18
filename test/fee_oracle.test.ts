@@ -68,4 +68,14 @@ contract("Pool", function (accounts) {
     expect(+result.toString()).lt(+toWei("0.0001").toString());
     await pool.withdraw(0, toWei("25000"), {from: alice});
   })
+
+  it("test small change", async function () {
+    await lp.approve(pool.address, toWei("25000000"), {from: alice})
+    await pool.deposit(0, toWei("100"), {from: alice});
+    const fee100 = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
+    await pool.deposit(0, toWei("0.001"), {from: alice});
+    const fee101 = await feeOracle.fee(lp.address, alice, toWei("1"), "0x0");
+    expect(fee100.toString()).not.eq(fee101.toString());
+    await pool.withdraw(0, toWei("100.001"), {from: alice});
+  })
 })

@@ -5,9 +5,10 @@ import {
   TokenInstance,
   WrappedTokenInstance
 } from '../types';
-import { Helper, TokenType } from './utils';
-import { expectEvent, expectRevert} from '@openzeppelin/test-helpers';
-const { toBN, asciiToHex, padRight, toWei } = web3.utils;
+import { Helper, TokenStatus, TokenType } from './utils';
+import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
+
+const {toBN, asciiToHex, padRight, toWei} = web3.utils;
 const Bridge = artifacts.require('Bridge');
 const WrappedToken = artifacts.require('WrappedToken');
 const Token = artifacts.require('Token');
@@ -27,7 +28,6 @@ contract('Bridge: common flow', (accounts) => {
   let validator: MockValidatorInstance;
   let feeOracle: MockFeeOracleInstance;
   let token: TokenInstance;
-  let WETH: TokenInstance;
   let wrappedTokenA: WrappedTokenInstance;
   let wrappedTokenB: WrappedTokenInstance;
   const recipientB = accounts[2];
@@ -42,9 +42,6 @@ contract('Bridge: common flow', (accounts) => {
   const A_NETWORK_HEX = padRight(asciiToHex(A_NETWORK), 8);
   const B_NETWORK = 'RPS';
   const B_NETWORK_HEX = padRight(asciiToHex(B_NETWORK), 8);
-  const SYMBOL = 'TKN';
-  const DECIMAL = 18;
-  const oracle = web3.eth.accounts.create();
   const wrappedTokenSourceAddress = web3.eth.accounts.create().address;
 
   before(async () => {
@@ -62,48 +59,53 @@ contract('Bridge: common flow', (accounts) => {
 
   it('Fail: Add token (not owner)', async () => {
     await expectRevert(
-       bridgeA.addToken(A_NETWORK_HEX, token.address, token.address, TokenType.Native),
-        "AccessControl"
+      bridgeA.addToken(A_NETWORK_HEX, token.address, token.address, TokenType.Native),
+      'AccessControl'
     );
   });
 
-  it('Success: set roles', async ()=> {
-    const tokenManagerRole = await bridgeA.TOKEN_MANAGER()
-    const startManagerRole = await bridgeA.START_MANAGER()
-    const feeOracleManagerRole = await bridgeA.FEE_ORACLE_MANAGER()
+  it('Success: set roles', async () => {
+    const tokenManagerRole = await bridgeA.TOKEN_MANAGER();
+    const startManagerRole = await bridgeA.START_MANAGER();
+    const feeOracleManagerRole = await bridgeA.FEE_ORACLE_MANAGER();
+    const tokenStatusManagerRole = await bridgeA.TOKEN_STATUS_MANAGER();
     await bridgeA.grantRole(tokenManagerRole, payer);
     await bridgeB.grantRole(tokenManagerRole, payer);
     await bridgeA.grantRole(startManagerRole, payer);
     await bridgeB.grantRole(startManagerRole, payer);
     await bridgeA.grantRole(feeOracleManagerRole, payer);
     await bridgeB.grantRole(feeOracleManagerRole, payer);
+    await bridgeA.grantRole(tokenStatusManagerRole, payer);
+    await bridgeB.grantRole(tokenStatusManagerRole, payer);
     expect(await bridgeA.hasRole(tokenManagerRole, payer)).eq(true);
     expect(await bridgeB.hasRole(tokenManagerRole, payer)).eq(true);
     expect(await bridgeA.hasRole(startManagerRole, payer)).eq(true);
     expect(await bridgeB.hasRole(startManagerRole, payer)).eq(true);
     expect(await bridgeA.hasRole(feeOracleManagerRole, payer)).eq(true);
     expect(await bridgeB.hasRole(feeOracleManagerRole, payer)).eq(true);
+    expect(await bridgeA.hasRole(tokenStatusManagerRole, payer)).eq(true);
+    expect(await bridgeB.hasRole(tokenStatusManagerRole, payer)).eq(true);
   });
 
   it('Success: activate bridge', async () => {
     await bridgeA.startBridge();
     await bridgeB.startBridge();
-  })
+  });
 
 
   it('Fail: Lock (token not found)', async () => {
     await token.approve(bridgeA.address, MAX_UINT256);
 
     await expectRevert(
-        bridgeA.lock(token.address, '10', recipientB, B_NETWORK_HEX),
-        "Bridge: unsupported token"
+      bridgeA.lock(token.address, '10', recipientB, B_NETWORK_HEX),
+      'Bridge: unsupported token'
     );
 
     await token.approve(bridgeA.address, '0');
 
-  })
+  });
 
-  it('Success: Add token to A', async ()=> {
+  it('Success: Add token to A', async () => {
     await bridgeA.addToken(A_NETWORK_HEX, token.address, token.address, TokenType.Native);
     const localTokenInfo = await bridgeA.tokenInfos(token.address);
     expect(localTokenInfo).deep.include({
@@ -116,7 +118,7 @@ contract('Bridge: common flow', (accounts) => {
     expect(await bridgeA.tokenSourceMap(A_NETWORK_HEX, token.address)).eq(token.address);
   });
 
-  it('Success: Add wrapped token to A', async ()=> {
+  it('Success: Add wrapped token to A', async () => {
     await bridgeA.addToken(A_NETWORK_HEX, wrappedTokenSourceAddress, wrappedTokenA.address, TokenType.Wrapped);
     const localTokenInfo = await bridgeA.tokenInfos(wrappedTokenA.address);
     expect(localTokenInfo).deep.include({
@@ -132,11 +134,11 @@ contract('Bridge: common flow', (accounts) => {
   it('Fail: Add token (already exists)', async () => {
     await expectRevert(
       bridgeA.addToken(A_NETWORK_HEX, wrappedTokenSourceAddress, wrappedTokenA.address, TokenType.Wrapped),
-      "Bridge: exists"
+      'Bridge: exists'
     );
   });
 
-  it('Success: Add wrapped token to B', async ()=> {
+  it('Success: Add wrapped token to B', async () => {
     await bridgeB.addToken(A_NETWORK_HEX, token.address, wrappedTokenB.address, TokenType.Wrapped);
     const localTokenInfo = await bridgeB.tokenInfos(wrappedTokenB.address);
     expect(localTokenInfo).deep.include({
@@ -152,37 +154,37 @@ contract('Bridge: common flow', (accounts) => {
   it('Fail: Wrapped token mint', async () => {
     await expectRevert(
       wrappedTokenB.mint(payer, '1'),
-      "Ownable"
+      'Ownable'
     );
-  })
+  });
 
   it('Fail: Lock (not approved)', async () => {
     await expectRevert(
-        bridgeA.lock(token.address, amountWithFee, recipientB, B_NETWORK_HEX),
-        "ERC20: transfer amount exceeds allowance"
+      bridgeA.lock(token.address, amountWithFee, recipientB, B_NETWORK_HEX),
+      'ERC20: transfer amount exceeds allowance'
     );
-  })
+  });
 
   it('Fail: Lock (not enough balance)', async () => {
     const userBalance = await token.balanceOf(payer);
     await token.approve(bridgeA.address, MAX_UINT256);
 
     await expectRevert(
-        bridgeA.lock(token.address, userBalance.add(toBN(1)), recipientB, B_NETWORK_HEX),
-        "ERC20: transfer amount exceeds balance"
+      bridgeA.lock(token.address, userBalance.add(toBN(1)), recipientB, B_NETWORK_HEX),
+      'ERC20: transfer amount exceeds balance'
     );
     await token.approve(bridgeA.address, '0');
-  })
+  });
 
   it('Fail: Lock (amount too small)', async () => {
     await token.approve(bridgeA.address, MAX_UINT256);
 
     await expectRevert(
-        bridgeA.lock(token.address, toBN(fee), recipientB, B_NETWORK_HEX),
-        "Bridge: amount too small"
+      bridgeA.lock(token.address, toBN(fee), recipientB, B_NETWORK_HEX),
+      'Bridge: amount too small'
     );
     await token.approve(bridgeA.address, '0');
-  })
+  });
 
   it('Success: Lock', async () => {
     const userBalanceBefore = await token.balanceOf(payer);
@@ -219,7 +221,7 @@ contract('Bridge: common flow', (accounts) => {
       amount,
       lockId,
       source: hexSource
-    })
+    });
 
     const recipientBalance = await wrappedTokenB.balanceOf(recipientB);
     expect(recipientBalance.toString()).eq(amount);
@@ -237,7 +239,7 @@ contract('Bridge: common flow', (accounts) => {
 
     await expectRevert(
       bridgeB.unlock(lockId, recipientB, amountWithSystemPrecision, hexSource, hexSource, sourceAddress, signature),
-      "Bridge: validation failed"
+      'Bridge: validation failed'
     );
     await validator.setReturnError(false);
 
@@ -253,7 +255,7 @@ contract('Bridge: common flow', (accounts) => {
 
     await expectRevert(
       bridgeB.unlock(lockId, recipientB, amountWithSystemPrecision, hexSource, hexSource, sourceAddress, signature),
-      "Bridge: unsupported token"
+      'Bridge: unsupported token'
     );
   });
 
@@ -297,36 +299,18 @@ contract('Bridge: common flow', (accounts) => {
     (await helper.expectTokenBalance(bridgeA.address)).eq('0');
     (await helper.expectTokenBalance(recipientA)).eq(amount);
     (await helper.expectTokenBalance(feeCollector)).eq(fee);
+  });
+
+  it ('Fail: lock disabled token', async () => {
+    await bridgeA.setTokenStatus(token.address, TokenStatus.Disabled);
+    await token.approve(bridgeA.address, amountWithFee);
+    await expectRevert(
+      bridgeA.lock(token.address, amountWithFee, recipientB, B_NETWORK_HEX),
+      'Bridge: disabled token'
+    );
+    await bridgeA.setTokenStatus(token.address, TokenStatus.Enabled);
   })
-//
-//   it ('Success: Set fee address', async () => {
-//     await bridgeA.setFeeCollector(accounts[7]);
-//     expect((await bridgeA.feeCollector()).toString()).eq(accounts[7]);
-//   })
-//
-//   it('Fail: Change fee (not owner)', async () => {
-//     await expectRevert(bridgeA.setTokenFee(token.address, '10', {from: recipientA}), "Ownable: caller is not the owner");
-//   });
-//
-//   it('Success: Change fee', async () => {
-//     const newFee = '10';
-//     await bridgeA.setTokenFee(token.address, newFee);
-//     const localTokenInfoA = await bridgeA.tokenInfos(token.address);
-//     expect((localTokenInfoA as any).fee.toString()).eq(newFee);
-//
-//     await bridgeB.setTokenFee(wrappedTokenB.address, newFee);
-//     const localTokenInfoB = await bridgeB.tokenInfos(wrappedTokenB.address);
-//     expect((localTokenInfoB as any).fee.toString()).eq(newFee);
-//   })
-//
-//   it('Fail: Remove token (not owner)', async () => {
-//     await expectRevert(bridgeA.removeToken(A_NETWORK_HEX, token.address, recipientA, {from: recipientA}), "Ownable: caller is not the owner");
-//   });
-//
-//   it('Fail: Change wrapped token authority (not owner)', async () => {
-//     await expectRevert(wrappedTokenB.changeAuthority(recipientA, {from: recipientA}), "ERC20: !authority");
-//   });
-//
+
   it('Success: Remove native token', async () => {
     const newAuthority = accounts[9];
     await token.transfer(bridgeA.address, '5');
@@ -363,8 +347,8 @@ contract('Bridge: common flow', (accounts) => {
     expect((await wrappedTokenB.balanceOf(bridgeB.address)).toString()).eq('0');
     expect((await wrappedTokenB.balanceOf(newAuthority)).toString()).eq(tokenBalance.toString());
     expect((await wrappedTokenB.owner()).toString()).eq(newAuthority);
-  })
-})
+  });
+});
 
 contract('Bridge: WETH', (accounts) => {
   let helper: Helper;
@@ -395,13 +379,15 @@ contract('Bridge: WETH', (accounts) => {
     helper = new Helper(bridgeA, token);
   });
 
-  it('Success: set roles', async ()=> {
-    const tokenManagerRole = await bridgeA.TOKEN_MANAGER()
-    const startManagerRole = await bridgeA.START_MANAGER()
-    const feeOracleManagerRole = await bridgeA.FEE_ORACLE_MANAGER()
+  it('Success: set roles', async () => {
+    const tokenManagerRole = await bridgeA.TOKEN_MANAGER();
+    const startManagerRole = await bridgeA.START_MANAGER();
+    const feeOracleManagerRole = await bridgeA.FEE_ORACLE_MANAGER();
+    const tokenStatusManagerRole = await bridgeA.TOKEN_STATUS_MANAGER();
     await bridgeA.grantRole(tokenManagerRole, payer);
     await bridgeA.grantRole(startManagerRole, payer);
     await bridgeA.grantRole(feeOracleManagerRole, payer);
+    await bridgeA.grantRole(tokenStatusManagerRole, payer);
     expect(await bridgeA.hasRole(tokenManagerRole, payer)).eq(true);
     expect(await bridgeA.hasRole(startManagerRole, payer)).eq(true);
     expect(await bridgeA.hasRole(feeOracleManagerRole, payer)).eq(true);
@@ -409,15 +395,15 @@ contract('Bridge: WETH', (accounts) => {
 
   it('Success: activate bridge', async () => {
     await bridgeA.startBridge();
-  })
+  });
 
-  it('Success: Add WETH to A', async ()=> {
+  it('Success: Add WETH to A', async () => {
     await bridgeA.addToken(A_NETWORK_HEX, WETH.address, WETH.address, TokenType.Base);
     const localTokenInfo = await bridgeA.tokenInfos(WETH.address);
     expect(localTokenInfo).deep.include({
       tokenSource: A_NETWORK_HEX,
       tokenSourceAddress: helper.addressToBytes32(WETH.address),
-      precision: await  WETH.decimals(),
+      precision: await WETH.decimals(),
       tokenType: toBN(TokenType.Base)
     });
 
@@ -468,12 +454,22 @@ contract('Bridge: WETH', (accounts) => {
       amount: amount,
       lockId,
       source: B_NETWORK_HEX
-    })
+    });
 
 
     expect(toBN(bridgeBalanceBefore).sub(toBN(amount)).toString()).eq(bridgeBalanceAfter);
     expect(toBN(balanceBefore).add(toBN(amount)).toString()).eq(balanceAfter);
   });
+
+  it ('Fail: lock disabled token', async () => {
+    await bridgeA.setTokenStatus(WETH.address, TokenStatus.Disabled);
+    await token.approve(bridgeA.address, amountWithFee);
+    await expectRevert(
+      bridgeA.lockBase(recipientB, B_NETWORK_HEX, WETH.address, {value: amountWithFee}),
+      'Bridge: disabled token'
+    );
+    await bridgeA.setTokenStatus(WETH.address, TokenStatus.Enabled);
+  })
 
   it('Success: Remove WETH token', async () => {
     const newAuthority = accounts[9];
@@ -486,7 +482,7 @@ contract('Bridge: WETH', (accounts) => {
       tokenSource: ZERO_BLOCKHAIN_ID,
       tokenSourceAddress: ZERO_BYTES32,
       precision: toBN(0),
-      tokenType: toBN(0),
+      tokenType: toBN(0)
     });
 
     expect(await bridgeA.tokenSourceMap(A_NETWORK_HEX, WETH.address)).eq(ZERO_ADDRESS);
@@ -494,4 +490,4 @@ contract('Bridge: WETH', (accounts) => {
     expect((await web3.eth.getBalance(bridgeA.address)).toString()).eq('0');
     expect((await web3.eth.getBalance(newAuthority)).toString()).eq(toBN(newAuthorityBalanceBefore).add(toBN(balance)).toString());
   });
-})
+});

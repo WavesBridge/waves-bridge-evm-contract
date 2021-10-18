@@ -19,6 +19,7 @@ contract Bridge is AccessControl {
     bytes32 public constant FEE_ORACLE_MANAGER = keccak256("FEE_ORACLE_MANAGER");
     bytes32 public constant FEE_COLLECTOR_MANAGER = keccak256("FEE_COLLECTOR_MANAGER");
     bytes32 public constant TOKEN_MANAGER = keccak256("TOKEN_MANAGER");
+    bytes32 public constant TOKEN_STATUS_MANAGER = keccak256("TOKEN_STATUS_MANAGER");
     bytes32 public constant VALIDATOR_MANAGER = keccak256("VALIDATOR_MANAGER");
     bytes32 public constant START_MANAGER = keccak256("START_MANAGER");
     bytes32 public constant STOP_MANAGER = keccak256("STOP_MANAGER");
@@ -31,6 +32,12 @@ contract Bridge is AccessControl {
         WrappedV0,
         Wrapped
     }
+
+    enum TokenStatus {
+        Enabled,
+        Disabled
+    }
+
     uint256 private constant SYSTEM_PRECISION = 9;
 
     event Sent(
@@ -59,6 +66,7 @@ contract Bridge is AccessControl {
         bytes32 tokenSourceAddress;
         uint8 precision;
         TokenType tokenType;
+        TokenStatus tokenStatus;
     }
 
     // Map to get token info by its address
@@ -100,6 +108,8 @@ contract Bridge is AccessControl {
             destination
         );
 
+        require(tokenInfo.tokenStatus == TokenStatus.Enabled, "Bridge: disabled token");
+
         if (tokenInfo.tokenType == TokenType.Native) {
             // If token is native - transfer tokens from user to contract
             IERC20(tokenAddress).safeTransferFrom(
@@ -111,7 +121,7 @@ contract Bridge is AccessControl {
             // Legacy wrapped tokens burn
             IWrappedTokenV0(tokenAddress).burn(msg.sender, amountToLock);
         } else {
-            revert("Invalid token type");
+            revert("Bridge: invalid token type");
         }
 
         if (fee > 0) {
@@ -132,7 +142,8 @@ contract Bridge is AccessControl {
             destination
         );
 
-        require(tokenInfo.tokenType == TokenType.Base, "Invalid token type");
+        require(tokenInfo.tokenStatus == TokenStatus.Enabled, "Bridge: disabled token");
+        require(tokenInfo.tokenType == TokenType.Base, "Bridge: invalid token type");
 
         if (fee > 0) {
             // If there is fee - transfer ETH to fee collector address
@@ -189,7 +200,7 @@ contract Bridge is AccessControl {
         uint8 precision = ERC20(nativeTokenAddress).decimals();
 
         tokenSourceMap[tokenSource][tokenSourceAddress] = nativeTokenAddress;
-        tokenInfos[nativeTokenAddress] = TokenInfo(tokenSource, tokenSourceAddress, precision, tokenType);
+        tokenInfos[nativeTokenAddress] = TokenInfo(tokenSource, tokenSourceAddress, precision, tokenType, TokenStatus.Enabled);
     }
 
     // Method to remove token from lists
@@ -228,6 +239,11 @@ contract Bridge is AccessControl {
 
     function setValidator(address _validator ) external onlyRole(VALIDATOR_MANAGER) {
         validator = _validator;
+    }
+
+    function setTokenStatus(address tokenAddress, TokenStatus status)  external onlyRole(TOKEN_STATUS_MANAGER) {
+        require(tokenInfos[tokenAddress].tokenSourceAddress != bytes32(0), "Bridge: unsupported token");
+        tokenInfos[tokenAddress].tokenStatus = status;
     }
 
     function startBridge() external onlyRole(START_MANAGER) {

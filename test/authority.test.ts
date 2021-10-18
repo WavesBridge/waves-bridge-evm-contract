@@ -1,14 +1,15 @@
-import { TokenType } from './utils';
+import { TokenStatus, TokenType } from './utils';
 
-const Bridge = artifacts.require("Bridge");
-const Token = artifacts.require("Token");
-const { expectRevert } = require('@openzeppelin/test-helpers');
+const Bridge = artifacts.require('Bridge');
+const Token = artifacts.require('Token');
+const FeeOracle = artifacts.require('FeeOracle');
+const {expectRevert} = require('@openzeppelin/test-helpers');
 
 contract('Bridge', (accounts) => {
   it('success: fee oracle test', async () => {
     const feeManager = accounts[1];
     const bridge = await Bridge.deployed();
-    const feeOracleManagerRole = await bridge.FEE_ORACLE_MANAGER()
+    const feeOracleManagerRole = await bridge.FEE_ORACLE_MANAGER();
     await bridge.grantRole(feeOracleManagerRole, feeManager);
     await bridge.setFeeOracle(accounts[8], {from: feeManager});
     expect(await bridge.feeOracle()).eq(accounts[8]);
@@ -16,16 +17,15 @@ contract('Bridge', (accounts) => {
     await bridge.grantRole(feeOracleManagerRole, accounts[2]);
     await expectRevert(
       bridge.setFeeOracle(accounts[8], {from: feeManager}),
-      "AccessControl"
+      'AccessControl'
     );
   });
 
 
-
-  it('success: fee oracle test', async () => {
+  it('success: fee сollector test', async () => {
     const feeCollectorManager = accounts[1];
     const bridge = await Bridge.deployed();
-    const feeCollectorManagerRole = await bridge.FEE_COLLECTOR_MANAGER()
+    const feeCollectorManagerRole = await bridge.FEE_COLLECTOR_MANAGER();
     await bridge.grantRole(feeCollectorManagerRole, feeCollectorManager);
     await bridge.setFeeCollector(accounts[8], {from: feeCollectorManager});
     expect(await bridge.feeCollector()).eq(accounts[8]);
@@ -33,8 +33,30 @@ contract('Bridge', (accounts) => {
     await bridge.grantRole(feeCollectorManagerRole, accounts[2]);
     await expectRevert(
       bridge.setFeeOracle(accounts[8], {from: feeCollectorManager}),
-      "AccessControl"
+      'AccessControl'
     );
+  });
+
+  it('success: token status test', async () => {
+    const tokenStatusManager = accounts[1];
+    const tokenManager = accounts[5];
+    const bridge = await Bridge.deployed();
+    const tokenManagerRole = await bridge.TOKEN_MANAGER();
+    const tokenStatusManagerRole = await bridge.TOKEN_STATUS_MANAGER();
+    await bridge.grantRole(tokenManagerRole, tokenManager);
+    const token = await Token.deployed();
+    await bridge.addToken('0x00000001', token.address, token.address, TokenType.Native, {from: tokenManager});
+    await bridge.grantRole(tokenStatusManagerRole, tokenStatusManager);
+    await bridge.setTokenStatus(token.address, TokenStatus.Disabled, {from: tokenStatusManager});
+    expect(+(await bridge.tokenInfos(token.address) as any).tokenStatus).eq(TokenStatus.Disabled);
+    await bridge.revokeRole(tokenStatusManagerRole, tokenStatusManager);
+    await bridge.grantRole(tokenStatusManagerRole, accounts[2]);
+    await expectRevert(
+      bridge.setTokenStatus(token.address, TokenStatus.Enabled, {from: tokenStatusManager}),
+      'AccessControl'
+    );
+    await bridge.removeToken('0x00000001', token.address, accounts[4], {from: tokenManager});
+    await bridge.revokeRole(tokenManagerRole, tokenManager);
   });
 
 
@@ -42,7 +64,7 @@ contract('Bridge', (accounts) => {
     const tokenManager = accounts[1];
     const bridge = await Bridge.deployed();
     const token = await Token.deployed();
-    const tokenManagerRole = await bridge.TOKEN_MANAGER()
+    const tokenManagerRole = await bridge.TOKEN_MANAGER();
     await bridge.grantRole(tokenManagerRole, tokenManager);
     await bridge.addToken('0x00000001', token.address, token.address, TokenType.Native, {from: tokenManager});
     await bridge.removeToken('0x00000001', token.address, accounts[4], {from: tokenManager});
@@ -51,18 +73,18 @@ contract('Bridge', (accounts) => {
     await bridge.grantRole(tokenManagerRole, accounts[2]);
     await expectRevert(
       bridge.addToken('0x00000002', token.address, token.address, TokenType.Native, {from: tokenManager}),
-      "AccessControl"
+      'AccessControl'
     );
     await expectRevert(
       bridge.removeToken('0x00000002', token.address, accounts[4], {from: tokenManager}),
-      "AccessControl"
+      'AccessControl'
     );
   });
 
   it('success: validator test', async () => {
     const validatorManager = accounts[1];
     const bridge = await Bridge.deployed();
-    const validatorManagerRole = await bridge.VALIDATOR_MANAGER()
+    const validatorManagerRole = await bridge.VALIDATOR_MANAGER();
     await bridge.grantRole(validatorManagerRole, validatorManager);
     await bridge.setValidator(accounts[8], {from: validatorManager});
     expect(await bridge.validator()).eq(accounts[8]);
@@ -70,7 +92,7 @@ contract('Bridge', (accounts) => {
     await bridge.grantRole(validatorManagerRole, accounts[2]);
     await expectRevert(
       bridge.setValidator(accounts[8], {from: validatorManager}),
-      "AccessControl"
+      'AccessControl'
     );
   });
 
@@ -84,14 +106,14 @@ contract('Bridge', (accounts) => {
     await bridge.grantRole(stopManagerRole, stopManager);
     await bridge.startBridge({from: startManager});
     await bridge.stopBridge({from: stopManager});
-    await expectRevert(bridge.startBridge({from: stopManager}), "AccessControl");
-    await expectRevert(bridge.stopBridge({from: startManager}), "AccessControl");
+    await expectRevert(bridge.startBridge({from: stopManager}), 'AccessControl');
+    await expectRevert(bridge.stopBridge({from: startManager}), 'AccessControl');
     await bridge.revokeRole(startManagerRole, startManager);
     await bridge.grantRole(startManagerRole, accounts[2]);
     await bridge.revokeRole(stopManagerRole, stopManager);
     await bridge.grantRole(stopManagerRole, accounts[2]);
-    await expectRevert(bridge.startBridge({from: startManager}), "AccessControl");
-    await expectRevert(bridge.stopBridge({from: stopManager}), "AccessControl");
+    await expectRevert(bridge.startBridge({from: startManager}), 'AccessControl');
+    await expectRevert(bridge.stopBridge({from: stopManager}), 'AccessControl');
   });
 
   it('fail: stopped bridge', async () => {
@@ -99,12 +121,41 @@ contract('Bridge', (accounts) => {
     const token = await Token.deployed();
     await expectRevert(
       bridge.lock(token.address, '1', accounts[9], '0x01010101'),
-      "Bridge: is not active");
+      'Bridge: is not active');
     await expectRevert(
       bridge.lockBase(token.address, '0x01010101', token.address),
-      "Bridge: is not active");
+      'Bridge: is not active');
     await expectRevert(
-      bridge.unlock(1, accounts[9], '1',  '0x01010101', '0x01010101', token.address, '0x0'),
-      "Bridge: is not active");
+      bridge.unlock(1, accounts[9], '1', '0x01010101', '0x01010101', token.address, '0x0'),
+      'Bridge: is not active');
+  });
+
+  it('success: fee oracle access', async () => {
+    const feeOracle = await FeeOracle.new(web3.eth.accounts.create().address, '30');
+    await feeOracle.setMultiplier(3, 245);
+    expect(+await feeOracle.multipliers(3)).eq(245);
+
+    const tokenAddress = web3.eth.accounts.create().address;
+    await feeOracle.setMinFee(tokenAddress, 36);
+    expect(+await feeOracle.minFee(tokenAddress)).eq(36);
+
+    await feeOracle.setBaseFeeRate(24233);
+    expect(+await feeOracle.baseFeeRateBP()).eq(24233);
+
+    await expectRevert(
+      feeOracle.setMultiplier(3, 245, {from: accounts[1]}),
+      'Ownable'
+    );
+
+    await expectRevert(
+      feeOracle.setMinFee(tokenAddress, 36, {from: accounts[1]}),
+      'Ownable'
+    );
+
+    await expectRevert(
+      feeOracle.setBaseFeeRate(24233, {from: accounts[1]}),
+      'Ownable'
+    );
+
   });
 });
