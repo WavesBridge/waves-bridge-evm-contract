@@ -97,7 +97,7 @@ contract('Bridge: common flow', (accounts) => {
     await token.approve(bridgeA.address, MAX_UINT256);
 
     await expectRevert(
-      bridgeA.lock(token.address, '10', recipientB, B_NETWORK_HEX),
+      bridgeA.lock('1', token.address, recipientB, B_NETWORK_HEX, '10'),
       'Bridge: unsupported token'
     );
 
@@ -160,7 +160,7 @@ contract('Bridge: common flow', (accounts) => {
 
   it('Fail: Lock (not approved)', async () => {
     await expectRevert(
-      bridgeA.lock(token.address, amountWithFee, recipientB, B_NETWORK_HEX),
+      bridgeA.lock('1', token.address, recipientB, B_NETWORK_HEX, amountWithFee),
       'ERC20: transfer amount exceeds allowance'
     );
   });
@@ -170,7 +170,7 @@ contract('Bridge: common flow', (accounts) => {
     await token.approve(bridgeA.address, MAX_UINT256);
 
     await expectRevert(
-      bridgeA.lock(token.address, userBalance.add(toBN(1)), recipientB, B_NETWORK_HEX),
+      bridgeA.lock('1', token.address, recipientB, B_NETWORK_HEX, userBalance.add(toBN(1))),
       'ERC20: transfer amount exceeds balance'
     );
     await token.approve(bridgeA.address, '0');
@@ -180,7 +180,7 @@ contract('Bridge: common flow', (accounts) => {
     await token.approve(bridgeA.address, MAX_UINT256);
 
     await expectRevert(
-      bridgeA.lock(token.address, toBN(fee), recipientB, B_NETWORK_HEX),
+      bridgeA.lock('1', token.address, recipientB, B_NETWORK_HEX, toBN(fee)),
       'Bridge: amount too small'
     );
     await token.approve(bridgeA.address, '0');
@@ -188,16 +188,16 @@ contract('Bridge: common flow', (accounts) => {
 
   it('Success: Lock', async () => {
     const userBalanceBefore = await token.balanceOf(payer);
-
+    let lockId = toBN(0);
     await token.approve(bridgeA.address, amountWithFee);
-    const lockTx = await bridgeA.lock(token.address, amountWithFee, recipientB, B_NETWORK_HEX);
+    const lockTx = await bridgeA.lock(lockId, token.address, recipientB, B_NETWORK_HEX, amountWithFee);
 
     expectEvent(lockTx, 'Sent', {
       tokenSource: A_NETWORK_HEX,
       tokenSourceAddress: helper.addressToBytes32(token.address),
       recipient: helper.addressToBytes32(recipientB),
       amount,
-      lockId: toBN(0),
+      lockId,
       destination: B_NETWORK_HEX
     });
     (await helper.expectTokenBalance(bridgeA.address)).eq(amount);
@@ -264,7 +264,7 @@ contract('Bridge: common flow', (accounts) => {
 
     await wrappedTokenB.approve(bridgeB.address, fee, {from: recipientB});
 
-    const lockTx = await bridgeB.lock(wrappedTokenB.address, amount, recipientA, A_NETWORK_HEX, {from: recipientB});
+    const lockTx = await bridgeB.lock(lockId, wrappedTokenB.address, recipientA, A_NETWORK_HEX, amount, {from: recipientB});
     expect((await wrappedTokenB.balanceOf(recipientB)).toString()).eq('0');
     expect((await wrappedTokenB.balanceOf(feeCollector)).toString()).eq(fee);
 
@@ -305,7 +305,7 @@ contract('Bridge: common flow', (accounts) => {
     await bridgeA.setTokenStatus(token.address, TokenStatus.Disabled);
     await token.approve(bridgeA.address, amountWithFee);
     await expectRevert(
-      bridgeA.lock(token.address, amountWithFee, recipientB, B_NETWORK_HEX),
+      bridgeA.lock('1', token.address, recipientB, B_NETWORK_HEX, amountWithFee),
       'Bridge: disabled token'
     );
     await bridgeA.setTokenStatus(token.address, TokenStatus.Enabled);
@@ -414,7 +414,7 @@ contract('Bridge: WETH', (accounts) => {
     const lockId = '0';
     const balanceBefore = await web3.eth.getBalance(payer);
     const feeCollectorBalanceBefore = await web3.eth.getBalance(feeCollector);
-    const lockTx = await bridgeA.lockBase(recipientB, B_NETWORK_HEX, WETH.address, {value: amountWithFee});
+    const lockTx = await bridgeA.lockBase(lockId, WETH.address, recipientB, B_NETWORK_HEX, {value: amountWithFee});
     const gasUsed = lockTx.receipt.gasUsed;
 
     const balanceAfter = await web3.eth.getBalance(payer);
@@ -465,7 +465,7 @@ contract('Bridge: WETH', (accounts) => {
     await bridgeA.setTokenStatus(WETH.address, TokenStatus.Disabled);
     await token.approve(bridgeA.address, amountWithFee);
     await expectRevert(
-      bridgeA.lockBase(recipientB, B_NETWORK_HEX, WETH.address, {value: amountWithFee}),
+      bridgeA.lockBase('1', WETH.address, recipientB, B_NETWORK_HEX, {value: amountWithFee}),
       'Bridge: disabled token'
     );
     await bridgeA.setTokenStatus(WETH.address, TokenStatus.Enabled);
@@ -473,7 +473,7 @@ contract('Bridge: WETH', (accounts) => {
 
   it('Success: Remove WETH token', async () => {
     const newAuthority = accounts[9];
-    await bridgeA.lockBase(recipientB, B_NETWORK_HEX, WETH.address, {value: amountWithFee});
+    await bridgeA.lockBase('1', WETH.address, recipientB, B_NETWORK_HEX,{value: amountWithFee});
     const balance = await web3.eth.getBalance(bridgeA.address);
     const newAuthorityBalanceBefore = await web3.eth.getBalance(newAuthority);
     await bridgeA.removeToken(A_NETWORK_HEX, WETH.address, newAuthority);

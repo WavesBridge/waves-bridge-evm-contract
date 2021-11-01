@@ -120,10 +120,10 @@ contract('Bridge', (accounts) => {
     const bridge = await Bridge.deployed();
     const token = await Token.deployed();
     await expectRevert(
-      bridge.lock(token.address, '1', accounts[9], '0x01010101'),
+      bridge.lock('1', token.address, accounts[9], '0x01010101', '1'),
       'Bridge: is not active');
     await expectRevert(
-      bridge.lockBase(token.address, '0x01010101', token.address),
+      bridge.lockBase('1', token.address, token.address, '0x01010101', ),
       'Bridge: is not active');
     await expectRevert(
       bridge.unlock(1, accounts[9], '1', '0x01010101', '0x01010101', token.address, '0x0'),
@@ -132,8 +132,8 @@ contract('Bridge', (accounts) => {
 
   it('success: fee oracle access', async () => {
     const feeOracle = await FeeOracle.new(web3.eth.accounts.create().address, '30');
-    await feeOracle.setMultiplier(3, 245);
-    expect(+await feeOracle.multipliers(3)).eq(245);
+    await feeOracle.setFeeMultiplier(245);
+    expect(+await feeOracle.feeMultiplier()).eq(245);
 
     const tokenAddress = web3.eth.accounts.create().address;
     await feeOracle.setMinFee(tokenAddress, 36);
@@ -143,7 +143,7 @@ contract('Bridge', (accounts) => {
     expect(+await feeOracle.baseFeeRateBP()).eq(24233);
 
     await expectRevert(
-      feeOracle.setMultiplier(3, 245, {from: accounts[1]}),
+      feeOracle.setFeeMultiplier(245, {from: accounts[1]}),
       'Ownable'
     );
 
