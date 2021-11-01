@@ -3,27 +3,26 @@ pragma solidity ^0.8.0;
 import "../interfaces/IValidator.sol";
 
 contract MockValidator is IValidator {
-    uint256 lastLockId = 0;
     bool returnError = false;
 
     function createLock(
+        uint128 lockId,
         address,
         bytes32,
         uint256,
         bytes4,
         bytes4,
         bytes32
-    ) external override returns (uint256) {
+    ) external override view returns (uint128) {
         if (returnError) {
             revert("MockValidator: error");
         }
-        uint256 result = lastLockId;
-        lastLockId += 1;
-        return result;
+
+        return lockId;
     }
 
     function createUnlock(
-        uint256,
+        uint128,
         address,
         uint256,
         bytes4,

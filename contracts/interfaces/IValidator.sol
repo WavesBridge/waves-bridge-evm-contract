@@ -4,16 +4,17 @@ pragma solidity ^0.8.0;
 
 interface IValidator {
     function createLock(
+        uint128 lockId,
         address sender,
         bytes32 recipient,
         uint256 amount,
         bytes4 destination,
         bytes4 tokenSource,
         bytes32 tokenSourceAddress
-    ) external returns (uint256);
+    ) external returns (uint128);
 
     function createUnlock(
-        uint256 lockId,
+        uint128 lockId,
         address recipient,
         uint256 amount,
         bytes4 lockSource,

@@ -46,10 +46,10 @@ contract Bridge is AccessControl {
         address sender,
         bytes32 indexed recipient,
         uint256 amount,
-        uint256 indexed lockId,
+        uint128 indexed lockId,
         bytes4 destination
     );
-    event Received(address indexed recipient, address token, uint256 amount, uint256 indexed lockId, bytes4 source);
+    event Received(address indexed recipient, address token, uint256 amount, uint128 indexed lockId, bytes4 source);
 
     // Validator contract address
     address public validator;
@@ -96,12 +96,14 @@ contract Bridge is AccessControl {
 
     // Method to lock tokens
     function lock(
+        uint128 lockId,
         address tokenAddress,
-        uint256 amount,
         bytes32 recipient,
-        bytes4 destination
+        bytes4 destination,
+        uint256 amount
     ) external isActive {
         (uint256 amountToLock, uint256 fee, TokenInfo memory tokenInfo) = _createLock(
+            lockId,
             tokenAddress,
             amount,
             recipient,
@@ -134,8 +136,9 @@ contract Bridge is AccessControl {
         }
     }
 
-    function lockBase(bytes32 recipient, bytes4 destination, address wrappedBaseTokenAddress) external payable isActive{
+    function lockBase(uint128 lockId, address wrappedBaseTokenAddress, bytes32 recipient, bytes4 destination) external payable isActive{
         (, uint256 fee, TokenInfo memory tokenInfo) = _createLock(
+            lockId,
             wrappedBaseTokenAddress,
             msg.value,
             recipient,
@@ -153,7 +156,7 @@ contract Bridge is AccessControl {
 
     // Method unlock funds. Amount has to be in system precision
     function unlock(
-        uint256 lockId,
+        uint128 lockId,
         address recipient, uint256 amount,
         bytes4 lockSource, bytes4 tokenSource,
         bytes32 tokenSourceAddress,
@@ -257,6 +260,7 @@ contract Bridge is AccessControl {
     // Private method to validate lock, create lock record, and emmit the event
     // Method returns amount to lock and token info structure
     function _createLock(
+        uint128 lockId,
         address tokenAddress,
         uint256 amount,
         bytes32 recipient,
@@ -277,7 +281,8 @@ contract Bridge is AccessControl {
         uint256 amountToLock = amount - fee;
 
         // Create and add lock structure to the locks list
-        uint256 lockId = IValidator(validator).createLock(
+        IValidator(validator).createLock(
+            lockId,
             msg.sender,
             recipient,
             toSystemPrecision(amountToLock, tokenInfo.precision),
