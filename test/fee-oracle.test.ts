@@ -60,12 +60,11 @@ contract("Pool", function (accounts) {
   })
 
   it("test small change", async function () {
-    await ABR.approve(pool.address, toWei("25000000"), {from: alice})
-    await pool.deposit( toWei("100"), {from: alice});
+    await pool.transfer(alice, toWei("100"), {from: bob});
     const fee100 = await feeOracle.fee(ABR.address, alice, toWei("1"), "0x0");
-    await pool.deposit( toWei("0.001"), {from: alice});
+    await pool.transfer(alice, toWei("0.001"), {from: bob});
     const fee101 = await feeOracle.fee(ABR.address, alice, toWei("1"), "0x0");
     expect(fee100.toString()).not.eq(fee101.toString());
-    await pool.withdraw( toWei("100.001"), {from: alice});
+    await pool.transfer(bob, toWei("100.001"), {from: alice});
   })
 })
