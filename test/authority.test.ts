@@ -131,7 +131,7 @@ contract('Bridge', (accounts) => {
   });
 
   it('success: fee oracle access', async () => {
-    const feeOracle = await FeeOracle.new(web3.eth.accounts.create().address, '30');
+    const feeOracle = await FeeOracle.new(web3.eth.accounts.create().address, '30', '2000000');
     await feeOracle.setFeeMultiplier(245);
     expect(+await feeOracle.feeMultiplier()).eq(245);
 

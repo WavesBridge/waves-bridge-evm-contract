@@ -16,8 +16,7 @@ contract("Pool", function (accounts) {
     ABR = await Token.new('Reward token', 'ABR', toWei('2500000000'))
     pool = await Staking.new(ABR.address)
 
-    feeOracle = await FeeOracle.new(pool.address, '30');
-    await feeOracle.setFeeMultiplier("2000000");
+    feeOracle = await FeeOracle.new(pool.address, '30', '2000000');
     await ABR.transfer(bob, toWei("5000000"));
     await ABR.approve(pool.address, toWei("5000000"), {from: bob})
     await pool.deposit(toWei("5000000"), {from: bob})

@@ -8,12 +8,11 @@ module.exports = async function(deployer, network, addresses) {
   let feeOracle;
   let admin = addresses[0];
   if (network == "test") {
-    await deployer.deploy(Token, "Test Token", "TST", web3.utils.toWei('1000000'));
+    await deployer.deploy(Token, "Test ABR", "tABR", web3.utils.toWei('1000000'));
     await deployer.deploy(MockFeeOracle);
     feeOracle = (await MockFeeOracle.deployed()).address;
     await deployer.deploy(Validator);
     validator = (await Validator.deployed()).address;
     await deployer.deploy(Bridge, admin, admin, validator, feeOracle);
-
   }
 };

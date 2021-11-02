@@ -35,6 +35,15 @@ module.exports = async function(deployer, network, addresses) {
       validator = process.env.VALIDATOR_POL;
       feeOracle = process.env.FEE_ORACLE_POL;
       break;
+    case 'kovan':
+    case 'kovan-fork':
+      feeCollector = process.env.FEE_COLLECTOR_KVN;
+      admin = process.env.ADMIN_KVN;
+      validator = process.env.VALIDATOR_KVN;
+      feeOracle = process.env.FEE_ORACLE_KVN;
+      break;
+    default:
+      throw new Error("Network doesn't match")
   }
 
   if (!feeCollector) {

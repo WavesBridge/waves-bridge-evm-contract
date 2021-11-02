@@ -21,9 +21,10 @@ contract FeeOracle is Ownable {
 
     IERC20 public xABR;
 
-    constructor(IERC20 xABR_, uint256 baseFeeRateBP_) {
+    constructor(IERC20 xABR_, uint256 baseFeeRateBP_, uint256 feeMultiplier_) {
         xABR = xABR_;
         baseFeeRateBP = baseFeeRateBP_;
+        feeMultiplier = feeMultiplier_;
     }
 
     function setFeeMultiplier(uint256 multiplier) public onlyOwner {

@@ -15,6 +15,17 @@ module.exports = {
       network_id: '5', // eslint-disable-line camelcase
       gasPrice: 10e9,
     },
+    kovan: {
+      provider: () => {
+        return new HDWalletProvider({
+          privateKeys: [process.env.KOVAN_PK],
+          providerOrUrl: 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY
+        });
+      },
+      network_id: '42',
+      gas: 8000000,
+      gasPrice: 10e9,
+    },
     mainnet: {
       provider: function() {
         return new HDWalletProvider({
