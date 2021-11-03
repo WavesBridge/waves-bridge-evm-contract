@@ -66,25 +66,15 @@ contract('Bridge: common flow', (accounts) => {
 
   it('Success: set roles', async () => {
     const tokenManagerRole = await bridgeA.TOKEN_MANAGER();
-    const startManagerRole = await bridgeA.START_MANAGER();
-    const feeOracleManagerRole = await bridgeA.FEE_ORACLE_MANAGER();
-    const tokenStatusManagerRole = await bridgeA.TOKEN_STATUS_MANAGER();
+    const bridgeManagerRole = await bridgeA.BRIDGE_MANAGER();
     await bridgeA.grantRole(tokenManagerRole, payer);
     await bridgeB.grantRole(tokenManagerRole, payer);
-    await bridgeA.grantRole(startManagerRole, payer);
-    await bridgeB.grantRole(startManagerRole, payer);
-    await bridgeA.grantRole(feeOracleManagerRole, payer);
-    await bridgeB.grantRole(feeOracleManagerRole, payer);
-    await bridgeA.grantRole(tokenStatusManagerRole, payer);
-    await bridgeB.grantRole(tokenStatusManagerRole, payer);
+    await bridgeA.grantRole(bridgeManagerRole, payer);
+    await bridgeB.grantRole(bridgeManagerRole, payer);
     expect(await bridgeA.hasRole(tokenManagerRole, payer)).eq(true);
     expect(await bridgeB.hasRole(tokenManagerRole, payer)).eq(true);
-    expect(await bridgeA.hasRole(startManagerRole, payer)).eq(true);
-    expect(await bridgeB.hasRole(startManagerRole, payer)).eq(true);
-    expect(await bridgeA.hasRole(feeOracleManagerRole, payer)).eq(true);
-    expect(await bridgeB.hasRole(feeOracleManagerRole, payer)).eq(true);
-    expect(await bridgeA.hasRole(tokenStatusManagerRole, payer)).eq(true);
-    expect(await bridgeB.hasRole(tokenStatusManagerRole, payer)).eq(true);
+    expect(await bridgeA.hasRole(bridgeManagerRole, payer)).eq(true);
+    expect(await bridgeB.hasRole(bridgeManagerRole, payer)).eq(true);
   });
 
   it('Success: activate bridge', async () => {
@@ -381,16 +371,11 @@ contract('Bridge: WETH', (accounts) => {
 
   it('Success: set roles', async () => {
     const tokenManagerRole = await bridgeA.TOKEN_MANAGER();
-    const startManagerRole = await bridgeA.START_MANAGER();
-    const feeOracleManagerRole = await bridgeA.FEE_ORACLE_MANAGER();
-    const tokenStatusManagerRole = await bridgeA.TOKEN_STATUS_MANAGER();
+    const bridgeManagerRole = await bridgeA.BRIDGE_MANAGER();
     await bridgeA.grantRole(tokenManagerRole, payer);
-    await bridgeA.grantRole(startManagerRole, payer);
-    await bridgeA.grantRole(feeOracleManagerRole, payer);
-    await bridgeA.grantRole(tokenStatusManagerRole, payer);
+    await bridgeA.grantRole(bridgeManagerRole, payer);
     expect(await bridgeA.hasRole(tokenManagerRole, payer)).eq(true);
-    expect(await bridgeA.hasRole(startManagerRole, payer)).eq(true);
-    expect(await bridgeA.hasRole(feeOracleManagerRole, payer)).eq(true);
+    expect(await bridgeA.hasRole(bridgeManagerRole, payer)).eq(true);
   });
 
   it('Success: activate bridge', async () => {
@@ -428,7 +413,10 @@ contract('Bridge: WETH', (accounts) => {
     });
 
     expect(await web3.eth.getBalance(bridgeA.address)).eq(amount);
-    expect(toBN(balanceBefore).sub(toBN(amountWithFee)).sub(toBN(gasPrice).mul(toBN(gasUsed))).toString()).eq(balanceAfter.toString());
+    const gasAmount = toBN(gasPrice).mul(toBN(gasUsed));
+
+    expect(toBN(balanceBefore).sub(toBN(amountWithFee)).sub(gasAmount).div(toBN(1e15)).toString())
+      .eq(toBN(balanceAfter).div(toBN(1e15)).toString()); // div(1e15) to get approximate number
     expect(await web3.eth.getBalance(feeCollector)).eq(toBN(feeCollectorBalanceBefore).add(toBN(fee)).toString());
   });
 

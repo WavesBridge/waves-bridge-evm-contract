@@ -16,12 +16,8 @@ import "./interfaces/IWrappedTokenV0.sol";
 contract Bridge is AccessControl {
     using SafeERC20 for IERC20;
 
-    bytes32 public constant FEE_ORACLE_MANAGER = keccak256("FEE_ORACLE_MANAGER");
-    bytes32 public constant FEE_COLLECTOR_MANAGER = keccak256("FEE_COLLECTOR_MANAGER");
     bytes32 public constant TOKEN_MANAGER = keccak256("TOKEN_MANAGER");
-    bytes32 public constant TOKEN_STATUS_MANAGER = keccak256("TOKEN_STATUS_MANAGER");
-    bytes32 public constant VALIDATOR_MANAGER = keccak256("VALIDATOR_MANAGER");
-    bytes32 public constant START_MANAGER = keccak256("START_MANAGER");
+    bytes32 public constant BRIDGE_MANAGER = keccak256("BRIDGE_MANAGER");
     bytes32 public constant STOP_MANAGER = keccak256("STOP_MANAGER");
 
     bool active;
@@ -232,24 +228,24 @@ contract Bridge is AccessControl {
         delete tokenSourceMap[tokenSource][tokenSourceAddress];
     }
 
-    function setFeeOracle(address _feeOracle) external onlyRole(FEE_ORACLE_MANAGER) {
+    function setFeeOracle(address _feeOracle) external onlyRole(TOKEN_MANAGER) {
         feeOracle = _feeOracle;
     }
 
-    function setFeeCollector(address _feeCollector) external onlyRole(FEE_COLLECTOR_MANAGER) {
+    function setFeeCollector(address _feeCollector) external onlyRole(TOKEN_MANAGER) {
         feeCollector = _feeCollector;
     }
 
-    function setValidator(address _validator ) external onlyRole(VALIDATOR_MANAGER) {
+    function setValidator(address _validator ) external onlyRole(BRIDGE_MANAGER) {
         validator = _validator;
     }
 
-    function setTokenStatus(address tokenAddress, TokenStatus status)  external onlyRole(TOKEN_STATUS_MANAGER) {
+    function setTokenStatus(address tokenAddress, TokenStatus status)  external onlyRole(TOKEN_MANAGER) {
         require(tokenInfos[tokenAddress].tokenSourceAddress != bytes32(0), "Bridge: unsupported token");
         tokenInfos[tokenAddress].tokenStatus = status;
     }
 
-    function startBridge() external onlyRole(START_MANAGER) {
+    function startBridge() external onlyRole(BRIDGE_MANAGER) {
         active = true;
     }
 
