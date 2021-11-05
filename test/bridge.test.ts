@@ -43,14 +43,15 @@ contract('Bridge: common flow', (accounts) => {
   const B_NETWORK = 'RPS';
   const B_NETWORK_HEX = padRight(asciiToHex(B_NETWORK), 8);
   const wrappedTokenSourceAddress = web3.eth.accounts.create().address;
+  const unlockSigner = accounts[8];
 
   before(async () => {
     wrappedTokenB = await WrappedToken.new(B_NETWORK_HEX, wrappedTokenSourceAddress, 18, 'Wrapped', 'WRP');
     wrappedTokenA = await WrappedToken.new(A_NETWORK_HEX, wrappedTokenSourceAddress, 18, 'Wrapped', 'WRP');
     validator = await Validator.deployed();
     feeOracle = await FeeOracle.deployed();
-    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address);
-    bridgeB = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address);
+    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address, unlockSigner);
+    bridgeB = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address, unlockSigner);
     token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
     await wrappedTokenA.transferOwnership(bridgeA.address);
@@ -268,7 +269,7 @@ contract('Bridge: common flow', (accounts) => {
     });
   });
 
-  it('Success: Unlock native', async () => {
+  it('Success: Unlock wrapped', async () => {
     const lockId = '6';
     const hexSource = padRight(asciiToHex(B_NETWORK), 8);
     const tokenAddress = token.address;
@@ -359,12 +360,13 @@ contract('Bridge: WETH', (accounts) => {
   const B_NETWORK = 'RPS';
   const B_NETWORK_HEX = padRight(asciiToHex(B_NETWORK), 8);
   const oracle = web3.eth.accounts.create();
+  const unlockSigner = accounts[8];
 
   before(async () => {
     WETH = await Token.new('Wrapped ETH', 'WETH', toWei('1000000'));
     validator = await Validator.deployed();
     feeOracle = await FeeOracle.deployed();
-    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address);
+    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address, unlockSigner);
     token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
   });
@@ -415,8 +417,8 @@ contract('Bridge: WETH', (accounts) => {
     expect(await web3.eth.getBalance(bridgeA.address)).eq(amount);
     const gasAmount = toBN(gasPrice).mul(toBN(gasUsed));
 
-    expect(toBN(balanceBefore).sub(toBN(amountWithFee)).sub(gasAmount).div(toBN(1e15)).toString())
-      .eq(toBN(balanceAfter).div(toBN(1e15)).toString()); // div(1e15) to get approximate number
+    expect(toBN(balanceBefore).sub(toBN(amountWithFee)).sub(gasAmount).div(toBN(1e16)).toString())
+      .eq(toBN(balanceAfter).div(toBN(1e16)).toString()); // div(1e15) to get approximate number
     expect(await web3.eth.getBalance(feeCollector)).eq(toBN(feeCollectorBalanceBefore).add(toBN(fee)).toString());
   });
 

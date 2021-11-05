@@ -12,4 +12,8 @@ contract MockFeeOracle is Ownable {
         return 0.1 ether;
     }
 
+    function minFee(address) public pure returns (uint256) {
+        return 0.1 ether;
+    }
+
 }

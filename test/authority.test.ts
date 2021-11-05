@@ -22,7 +22,7 @@ contract('Bridge', (accounts) => {
   });
 
 
-  it('success: fee сollector test', async () => {
+  it('success: fee collector test', async () => {
     const feeCollectorManager = accounts[1];
     const bridge = await Bridge.deployed();
     const tokenManagerRole = await bridge.TOKEN_MANAGER();
@@ -33,6 +33,21 @@ contract('Bridge', (accounts) => {
     await bridge.grantRole(tokenManagerRole, accounts[2]);
     await expectRevert(
       bridge.setFeeOracle(accounts[8], {from: feeCollectorManager}),
+      'AccessControl'
+    );
+  });
+
+  it('success: unlock signer test', async () => {
+    const unlockSigner = accounts[1];
+    const bridge = await Bridge.deployed();
+    const bridgeManagerRole = await bridge.BRIDGE_MANAGER();
+    await bridge.grantRole(bridgeManagerRole, unlockSigner);
+    await bridge.setUnlockSigner(accounts[8], {from: unlockSigner});
+    expect(await bridge.unlockSigner()).eq(accounts[8]);
+    await bridge.revokeRole(bridgeManagerRole, unlockSigner);
+    await bridge.grantRole(bridgeManagerRole, accounts[2]);
+    await expectRevert(
+      bridge.setUnlockSigner(accounts[8], {from: unlockSigner}),
       'AccessControl'
     );
   });

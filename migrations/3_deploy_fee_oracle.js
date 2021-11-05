@@ -11,24 +11,40 @@ module.exports = async function(deployer, network, addresses) {
 
   switch (network) {
     case 'mainnet':
+    case 'mainnet-fork':
       pool = process.env.POOL_ETH;
       baseFeeRateBP = process.env.BASE_FEE_RATE_BP_ETH;
       feeMultiplier = process.env.FEE_MULTIPLIER_ETH;
       break;
     case 'bsc':
+    case 'bsc-fork':
       pool = process.env.POOL_BSC;
       baseFeeRateBP = process.env.BASE_FEE_RATE_BP_BSC;
       feeMultiplier = process.env.FEE_MULTIPLIER_BSC;
       break;
     case 'heco':
+    case 'heco-fork':
       pool = process.env.POOL_HECO;
       baseFeeRateBP = process.env.BASE_FEE_RATE_BP_HECO;
       feeMultiplier = process.env.FEE_MULTIPLIER_HECO;
       break;
     case 'polygon':
+    case 'polygon-fork':
       pool = process.env.POOL_POL;
       baseFeeRateBP = process.env.BASE_FEE_RATE_BP_POL;
       feeMultiplier = process.env.FEE_MULTIPLIER_POL;
+      break;
+    case 'avalanche':
+    case 'avalanche-fork':
+      pool = process.env.POOL_AVA;
+      baseFeeRateBP = process.env.BASE_FEE_RATE_BP_AVA;
+      feeMultiplier = process.env.FEE_MULTIPLIER_AVA;
+      break;
+    case 'celo':
+    case 'celo-fork':
+      pool = process.env.POOL_CELO;
+      baseFeeRateBP = process.env.BASE_FEE_RATE_BP_CELO;
+      feeMultiplier = process.env.FEE_MULTIPLIER_CELO;
       break;
     case 'kovan':
     case 'kovan-fork':

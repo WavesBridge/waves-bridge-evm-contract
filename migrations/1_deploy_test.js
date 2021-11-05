@@ -13,6 +13,7 @@ module.exports = async function(deployer, network, addresses) {
     feeOracle = (await MockFeeOracle.deployed()).address;
     await deployer.deploy(Validator);
     validator = (await Validator.deployed()).address;
-    await deployer.deploy(Bridge, admin, admin, validator, feeOracle);
+    const unlockSigner = addresses[8];
+    await deployer.deploy(Bridge, admin, admin, validator, feeOracle, unlockSigner);
   }
 };
