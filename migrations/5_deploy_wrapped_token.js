@@ -16,7 +16,7 @@ module.exports = async function(deployer, network, addresses) {
   const symbol = ''; // Example: SOL
   const bridge = ''; // To set mint authority. Example: 0x4675A2f856efEB37d1e5f8c83d24202127F0B62d
 
-  if (!source || !sourceAddress || !decimals || !name || !symbol) {
+  if (!source || !sourceAddress || !decimals || !name || !symbol || !bridge) {
     throw new Error("Some value not specified");
   }
   console.log('source', source);
