@@ -6,19 +6,17 @@ contract MockValidator is IValidator {
     bool returnError = false;
 
     function createLock(
-        uint128 lockId,
+        uint128,
         address,
         bytes32,
         uint256,
         bytes4,
         bytes4,
         bytes32
-    ) external override view returns (uint128) {
+    ) external override view {
         if (returnError) {
             revert("MockValidator: error");
         }
-
-        return lockId;
     }
 
     function createUnlock(
@@ -29,8 +27,10 @@ contract MockValidator is IValidator {
         bytes4,
         bytes32,
         bytes calldata
-    ) external view override returns (bool) {
-        return !returnError;
+    ) external view override {
+        if (returnError) {
+            revert("MockValidator: error");
+        }
     }
 
     function setReturnError(bool _returnError) external {

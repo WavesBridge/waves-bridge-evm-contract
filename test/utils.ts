@@ -11,8 +11,8 @@ export enum TokenType {
 }
 
 export enum TokenStatus {
+  Disabled,
   Enabled,
-  Disabled
 }
 
 export class Helper {

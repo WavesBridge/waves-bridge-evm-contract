@@ -24,7 +24,8 @@ contract Staking is ERC20("xABR", "xABR"){
         if (totalShares == 0 || totalABR == 0) {
             _mint(msg.sender, _amount);
         }
-        // Calculate and mint the amount of xABR the ABR is worth. The ratio will change overtime, as xABR is burned/minted and ABR deposited + gained from fees / withdrawn.
+        // Calculate and mint the amount of xABR the ABR is worth. The ratio will change overtime, 
+        // as xABR is burned/minted and ABR deposited + gained from fees / withdrawn.
         else {
             uint256 what = _amount * totalShares / totalABR;
             _mint(msg.sender, what);

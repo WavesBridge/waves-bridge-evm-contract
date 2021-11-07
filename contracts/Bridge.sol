@@ -29,8 +29,8 @@ contract Bridge is AccessControl {
     }
 
     enum TokenStatus {
-        Enabled,
-        Disabled
+        Disabled,
+        Enabled
     }
 
     uint256 private constant SYSTEM_PRECISION = 9;
@@ -119,7 +119,10 @@ contract Bridge is AccessControl {
                 address(this),
                 amountToLock
             );
-        } else if (tokenInfo.tokenType == TokenType.WrappedV0 || tokenInfo.tokenType == TokenType.Wrapped) {
+        } else if (tokenInfo.tokenType == TokenType.Wrapped) {
+            // If wrapped then butn the token
+            WrappedToken(tokenAddress).burn(msg.sender, amountToLock);
+        } else if (tokenInfo.tokenType == TokenType.WrappedV0) {
             // Legacy wrapped tokens burn
             IWrappedTokenV0(tokenAddress).burn(msg.sender, amountToLock);
         } else {
@@ -136,7 +139,11 @@ contract Bridge is AccessControl {
         }
     }
 
-    function lockBase(uint128 lockId, address wrappedBaseTokenAddress, bytes32 recipient, bytes4 destination) external payable isActive{
+    function lockBase(
+        uint128 lockId, 
+        address wrappedBaseTokenAddress, 
+        bytes32 recipient, 
+        bytes4 destination) external payable isActive {
         (, uint256 fee, TokenInfo memory tokenInfo) = _createLock(
             lockId,
             wrappedBaseTokenAddress,
@@ -160,16 +167,16 @@ contract Bridge is AccessControl {
         address recipient, uint256 amount,
         bytes4 lockSource, bytes4 tokenSource,
         bytes32 tokenSourceAddress,
-        bytes calldata signature) external isActive{
+        bytes calldata signature) external isActive {
         // Create message hash and validate the signature
-        require(IValidator(validator).createUnlock(
+        IValidator(validator).createUnlock(
                 lockId,
-                    recipient,
-                    amount,
-                    lockSource,
-                    tokenSource,
-                    tokenSourceAddress,
-                    signature), "Bridge: validation failed");
+                recipient,
+                amount,
+                lockSource,
+                tokenSource,
+                tokenSourceAddress,
+                signature);
 
         // Mark lock as received
         address tokenAddress = tokenSourceMap[tokenSource][tokenSourceAddress];
@@ -197,11 +204,17 @@ contract Bridge is AccessControl {
             if (fee > 0) {
                 IERC20(tokenAddress).safeTransfer(feeCollector, fee);
             }
-        } else if (tokenInfo.tokenType == TokenType.Wrapped || tokenInfo.tokenType == TokenType.WrappedV0) {
+        } else if (tokenInfo.tokenType == TokenType.Wrapped) {
             // Else token is wrapped - mint tokens to the user
             WrappedToken(tokenAddress).mint(recipient, amountWithTokenPrecision);
             if (fee > 0) {
                 WrappedToken(tokenAddress).mint(feeCollector, fee);
+            }
+        } else if (tokenInfo.tokenType == TokenType.WrappedV0) {
+            // Legacy wrapped token
+            IWrappedTokenV0(tokenAddress).mint(recipient, amountWithTokenPrecision);
+            if (fee > 0) {
+                IWrappedTokenV0(tokenAddress).mint(feeCollector, fee);
             }
         }
 
@@ -211,18 +224,30 @@ contract Bridge is AccessControl {
     // Method to add token that already exist in the current blockchain
     // Fee has to be in system precision
     // If token is wrapped, but it was deployed manually, isManualWrapped must be true
-    function addToken(bytes4 tokenSource, bytes32 tokenSourceAddress, address nativeTokenAddress, TokenType tokenType) external onlyRole(TOKEN_MANAGER) {
+    function addToken(
+        bytes4 tokenSource, 
+        bytes32 tokenSourceAddress, 
+        address nativeTokenAddress, 
+        TokenType tokenType) external onlyRole(TOKEN_MANAGER) {
         require(
             tokenInfos[nativeTokenAddress].tokenSourceAddress == bytes32(0) &&
             tokenSourceMap[tokenSource][tokenSourceAddress] == address(0), "Bridge: exists");
         uint8 precision = ERC20(nativeTokenAddress).decimals();
 
         tokenSourceMap[tokenSource][tokenSourceAddress] = nativeTokenAddress;
-        tokenInfos[nativeTokenAddress] = TokenInfo(tokenSource, tokenSourceAddress, precision, tokenType, TokenStatus.Enabled);
+        tokenInfos[nativeTokenAddress] = TokenInfo(
+            tokenSource, 
+            tokenSourceAddress, 
+            precision, 
+            tokenType, 
+            TokenStatus.Enabled);
     }
 
     // Method to remove token from lists
-    function removeToken(bytes4 tokenSource, bytes32 tokenSourceAddress, address newAuthority) external onlyRole(TOKEN_MANAGER) {
+    function removeToken(
+        bytes4 tokenSource, 
+        bytes32 tokenSourceAddress, 
+        address newAuthority) external onlyRole(TOKEN_MANAGER) {
         require(newAuthority != address(0), "Bridge: zero address authority");
         address tokenAddress = tokenSourceMap[tokenSource][tokenSourceAddress];
         require(tokenAddress != address(0), "Bridge: token not found");

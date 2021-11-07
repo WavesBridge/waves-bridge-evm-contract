@@ -230,7 +230,7 @@ contract('Bridge: common flow', (accounts) => {
 
     await expectRevert(
       bridgeB.unlock(lockId, recipientB, amountWithSystemPrecision, hexSource, hexSource, sourceAddress, signature),
-      'Bridge: validation failed'
+      'MockValidator: error'
     );
     await validator.setReturnError(false);
 

@@ -11,7 +11,7 @@ interface IValidator {
         bytes4 destination,
         bytes4 tokenSource,
         bytes32 tokenSourceAddress
-    ) external returns (uint128);
+    ) external;
 
     function createUnlock(
         uint128 lockId,
@@ -21,5 +21,5 @@ interface IValidator {
         bytes4 tokenSource,
         bytes32 tokenSourceAddress,
         bytes calldata signature
-    ) external returns (bool);
+    ) external;
 }
