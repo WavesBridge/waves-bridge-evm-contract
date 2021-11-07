@@ -1,11 +1,11 @@
-import { FeeOracleInstance, IERC20Instance, PoolInstance, StakingInstance, TokenInstance } from '../types';
+import { FeeOracleInstance, IERC20Instance, StakingInstance, TokenInstance } from '../types';
 
 const Token = artifacts.require('Token');
 const Staking = artifacts.require('Staking');
 const FeeOracle = artifacts.require('FeeOracle');
 const { toWei } = web3.utils;
 
-contract("Pool", function (accounts) {
+contract("Fee Oracle", function (accounts) {
   const alice = accounts[1]
   const bob = accounts[2]
   let ABR: IERC20Instance;

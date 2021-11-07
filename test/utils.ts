@@ -32,7 +32,7 @@ export class Helper {
     return padRight(asciiToHex(network), 8, '0');
   }
 
-  getUnlockSignatureByPrivate(privateKey: string, transferId: string, recipient: string, amount: BN | string, source: string, tokenSource: string, tokenAddress: string, destination: string) {
+  getUnlockSignatureByPrivate(privateKey: string, transferId: string, recipient: string, amount, source: string, tokenSource: string, tokenAddress: string, destination: string) {
     const hash = web3.utils.soliditySha3(
       {t: 'uint256', v: transferId},
       {t: 'address', v: recipient},

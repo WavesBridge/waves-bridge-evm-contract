@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Note that it's ownable and the owner wields tremendous power. The ownership
 // will be transferred to a governance smart contract once REWARD is sufficiently
 // distributed and the community can show to govern itself.
-contract Pool is Ownable {
+contract Farming is Ownable {
     using SafeERC20 for IERC20;
     // Info of each user.
     struct UserInfo {

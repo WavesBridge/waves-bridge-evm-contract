@@ -12,7 +12,6 @@ import "./FeeOracle.sol";
 import "./interfaces/IValidator.sol";
 import "./interfaces/IWrappedTokenV0.sol";
 
-
 contract Bridge is AccessControl {
     using SafeERC20 for IERC20;
 

@@ -1,17 +1,17 @@
-import { IERC20Instance, PoolInstance, TokenInstance } from '../types';
+import { IERC20Instance, FarmingInstance, TokenInstance } from '../types';
 
 const Token = artifacts.require('Token');
-const Pool = artifacts.require('Pool');
+const Pool = artifacts.require('Farming');
 const {toWei} = web3.utils;
 const {time} = require('@openzeppelin/test-helpers');
 const {advanceBlockTo} = time;
 
-contract('Pool', function (accounts) {
+contract('Farming', function (accounts) {
   const alice = accounts[1];
   const bob = accounts[2];
   const carol = accounts[3];
   let rewardToken: IERC20Instance;
-  let pool: PoolInstance;
+  let pool: FarmingInstance;
   let lp: TokenInstance;
   let lp2: TokenInstance;
 
