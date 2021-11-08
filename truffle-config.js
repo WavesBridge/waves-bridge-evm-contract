@@ -87,8 +87,8 @@ module.exports = {
             providerOrUrl: url
           });
       },
-      gas: 400000,
-      gasPrice: 15e9,
+      gas: 8000000,
+      gasPrice: 50e9,
       network_id: '137', // eslint-disable-line camelcase
     }
   },
