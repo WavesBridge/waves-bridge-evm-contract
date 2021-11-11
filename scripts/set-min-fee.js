@@ -9,7 +9,7 @@ const FeeOracle = artifacts.require("FeeOracle");
 
 module.exports = async (callback) => {
   try {
-    const feeOracleAddress = await question('What Bridge contract address do you want to use?', FEE_ORACLE_ADDRESS);
+    const feeOracleAddress = await question('What Fee Oracle contract address do you want to use?', FEE_ORACLE_ADDRESS);
     const feeOracle = await FeeOracle.at(feeOracleAddress);
     const tokenAddress = await question('Token address', '');
     const erc20Contract = new web3.eth.Contract(erc20Abi, tokenAddress);
