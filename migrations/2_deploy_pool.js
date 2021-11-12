@@ -47,5 +47,5 @@ module.exports = async function(deployer, network, addresses) {
 
   console.log('baseToken', baseToken);
 
-  await deployer.deploy(Staking, baseToken);
+  await deployer.deploy(Staking, baseToken, {nonce: 0});
 };

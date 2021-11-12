@@ -3,6 +3,16 @@ require('source-map-support').install({hookRequire: true});
 require('dotenv').config();
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
+const Kit = require('@celo/contractkit');
+const kit = Kit.newKit('https://forno.celo.org');
+
+// AWAIT WRAPPER FOR ASYNC FUNC
+async function awaitWrapper() {
+    let account = kit.connection.addAccount(process.env.CELO_PK)
+}
+
+awaitWrapper()
+
 module.exports = {
   networks: {
     ganache: {
@@ -51,8 +61,8 @@ module.exports = {
             providerOrUrl: url
           });
       },
-      gas: 5000000,
-      gasPrice: 15e9,
+      gas: 400000,
+      gasPrice: 150e9,
       network_id: 1
     },
     bsc: {
@@ -63,7 +73,7 @@ module.exports = {
             providerOrUrl: url
           });
       },
-      gas: 5000000,
+      gas: 8000000,
       gasPrice: 10e9,
       network_id: '56', // eslint-disable-line camelcase
     },
@@ -75,7 +85,7 @@ module.exports = {
             providerOrUrl: url
           });
       },
-      gas: 5000000,
+      gas: 6000000,
       gasPrice: 10e9,
       network_id: '128', // eslint-disable-line camelcase
     },
@@ -90,6 +100,21 @@ module.exports = {
       gas: 8000000,
       gasPrice: 50e9,
       network_id: '137', // eslint-disable-line camelcase
+    },
+    avalanche: {
+      provider: function() {
+        return new HDWalletProvider({
+          privateKeys: [process.env.AVALANCHE_PK],
+          providerOrUrl: 'https://api.avax.network/ext/bc/C/rpc'
+        });
+      },
+      gas: 6000000,
+      gasPrice: 35e9,
+      network_id: '*', // eslint-disable-line camelcase
+    },
+    celo: {
+      provider: kit.connection.web3.currentProvider,
+      network_id: '*', // eslint-disable-line camelcase
     }
   },
   compilers: {

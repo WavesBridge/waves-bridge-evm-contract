@@ -19,7 +19,8 @@
     "dotenv": "^8.2.0",
     "source-map-support": "^0.5.20",
     "ts-node": "^10.2.1",
-    "typechain": "^5.1.0"
+    "typechain": "^5.1.0",
+    "@celo/contractkit": "^1.1.0"
   },
   "scripts": {
     "test": "truffle test",
