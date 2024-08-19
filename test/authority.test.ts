@@ -2,26 +2,9 @@ import { TokenStatus, TokenType } from './utils';
 
 const Bridge = artifacts.require('Bridge');
 const Token = artifacts.require('Token');
-const FeeOracle = artifacts.require('FeeOracle');
 const {expectRevert} = require('@openzeppelin/test-helpers');
 
 contract('Bridge', (accounts) => {
-  it('success: fee oracle test', async () => {
-    const feeManager = accounts[1];
-    const bridge = await Bridge.deployed();
-    const tokenManagerRole = await bridge.TOKEN_MANAGER();
-    await bridge.grantRole(tokenManagerRole, feeManager);
-    await bridge.setFeeOracle(accounts[8], {from: feeManager});
-    expect(await bridge.feeOracle()).eq(accounts[8]);
-    await bridge.revokeRole(tokenManagerRole, feeManager);
-    await bridge.grantRole(tokenManagerRole, accounts[2]);
-    await expectRevert(
-      bridge.setFeeOracle(accounts[8], {from: feeManager}),
-      'AccessControl'
-    );
-  });
-
-
   it('success: fee collector test', async () => {
     const feeCollectorManager = accounts[1];
     const bridge = await Bridge.deployed();
@@ -31,25 +14,6 @@ contract('Bridge', (accounts) => {
     expect(await bridge.feeCollector()).eq(accounts[8]);
     await bridge.revokeRole(tokenManagerRole, feeCollectorManager);
     await bridge.grantRole(tokenManagerRole, accounts[2]);
-    await expectRevert(
-      bridge.setFeeOracle(accounts[8], {from: feeCollectorManager}),
-      'AccessControl'
-    );
-  });
-
-  it('success: unlock signer test', async () => {
-    const unlockSigner = accounts[1];
-    const bridge = await Bridge.deployed();
-    const bridgeManagerRole = await bridge.BRIDGE_MANAGER();
-    await bridge.grantRole(bridgeManagerRole, unlockSigner);
-    await bridge.setUnlockSigner(accounts[8], {from: unlockSigner});
-    expect(await bridge.unlockSigner()).eq(accounts[8]);
-    await bridge.revokeRole(bridgeManagerRole, unlockSigner);
-    await bridge.grantRole(bridgeManagerRole, accounts[2]);
-    await expectRevert(
-      bridge.setUnlockSigner(accounts[8], {from: unlockSigner}),
-      'AccessControl'
-    );
   });
 
   it('success: token status test', async () => {
@@ -81,6 +45,7 @@ contract('Bridge', (accounts) => {
     const tokenManagerRole = await bridge.TOKEN_MANAGER();
     await bridge.grantRole(tokenManagerRole, tokenManager);
     await bridge.addToken('0x00000001', token.address, token.address, TokenType.Native, {from: tokenManager});
+    await bridge.setMinFee(token.address, 10, {from: tokenManager});
     await bridge.removeToken('0x00000001', token.address, accounts[4], {from: tokenManager});
     expect(await bridge.feeCollector()).eq(accounts[8]);
     await bridge.revokeRole(tokenManagerRole, tokenManager);
@@ -91,6 +56,10 @@ contract('Bridge', (accounts) => {
     );
     await expectRevert(
       bridge.removeToken('0x00000002', token.address, accounts[4], {from: tokenManager}),
+      'AccessControl'
+    );
+    await expectRevert(
+      bridge.setMinFee(token.address, 12, {from: tokenManager}),
       'AccessControl'
     );
   });
@@ -106,6 +75,21 @@ contract('Bridge', (accounts) => {
     await bridge.grantRole(bridgeManagerRole, accounts[2]);
     await expectRevert(
       bridge.setValidator(accounts[8], {from: validatorManager}),
+      'AccessControl'
+    );
+  });
+
+  it('success: setBaseFeeRate test', async () => {
+    const validatorManager = accounts[1];
+    const bridge = await Bridge.deployed();
+    const bridgeManagerRole = await bridge.BRIDGE_MANAGER();
+    await bridge.grantRole(bridgeManagerRole, validatorManager);
+    await bridge.setBaseFeeRate(15, {from: validatorManager});
+    expect(+(await bridge.baseFeeRateBP())).eq(15);
+    await bridge.revokeRole(bridgeManagerRole, validatorManager);
+    await bridge.grantRole(bridgeManagerRole, accounts[2]);
+    await expectRevert(
+      bridge.setBaseFeeRate(12, {from: validatorManager}),
       'AccessControl'
     );
   });
@@ -142,34 +126,5 @@ contract('Bridge', (accounts) => {
     await expectRevert(
       bridge.unlock(1, accounts[9], '1', '0x01010101', '0x01010101', token.address, '0x0'),
       'Bridge: is not active');
-  });
-
-  it('success: fee oracle access', async () => {
-    const feeOracle = await FeeOracle.new(web3.eth.accounts.create().address, '30', '2000000');
-    await feeOracle.setFeeMultiplier(245);
-    expect(+await feeOracle.feeMultiplier()).eq(245);
-
-    const tokenAddress = web3.eth.accounts.create().address;
-    await feeOracle.setMinFee(tokenAddress, 36);
-    expect(+await feeOracle.minFee(tokenAddress)).eq(36);
-
-    await feeOracle.setBaseFeeRate(24233);
-    expect(+await feeOracle.baseFeeRateBP()).eq(24233);
-
-    await expectRevert(
-      feeOracle.setFeeMultiplier(245, {from: accounts[1]}),
-      'Ownable'
-    );
-
-    await expectRevert(
-      feeOracle.setMinFee(tokenAddress, 36, {from: accounts[1]}),
-      'Ownable'
-    );
-
-    await expectRevert(
-      feeOracle.setBaseFeeRate(24233, {from: accounts[1]}),
-      'Ownable'
-    );
-
   });
 });

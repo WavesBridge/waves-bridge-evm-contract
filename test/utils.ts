@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import { BridgeInstance, TokenInstance } from '../types';
 
 const {padRight, asciiToHex} = web3.utils;
@@ -6,7 +5,6 @@ const {padRight, asciiToHex} = web3.utils;
 export enum TokenType {
   Base,
   Native,
-  WrappedV0,
   Wrapped,
 }
 

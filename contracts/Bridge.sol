@@ -8,9 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WrappedToken.sol";
-import "./FeeOracle.sol";
 import "./interfaces/IValidator.sol";
-import "./interfaces/IWrappedTokenV0.sol";
 
 contract Bridge is AccessControl {
     using SafeERC20 for IERC20;
@@ -19,12 +17,16 @@ contract Bridge is AccessControl {
     bytes32 public constant BRIDGE_MANAGER = keccak256("BRIDGE_MANAGER");
     bytes32 public constant STOP_MANAGER = keccak256("STOP_MANAGER");
 
+    uint256 public baseFeeRateBP;
+    uint256 public constant BP = 10000;
+    // tokenAddress => mintFee
+    mapping(address => uint256) public minFee;
+
     bool active;
 
     enum TokenType {
         Base,
         Native,
-        WrappedV0,
         Wrapped
     }
 
@@ -52,12 +54,6 @@ contract Bridge is AccessControl {
     // Address to collect fee
     address public feeCollector;
 
-    // Fee manager address
-    address public feeOracle;
-
-    // Fee manager address
-    address public unlockSigner;
-
     // Structure for token info
     struct TokenInfo {
         bytes4 tokenSource;
@@ -82,15 +78,11 @@ contract Bridge is AccessControl {
     constructor(
         address feeCollector_,
         address admin_,
-        address validator_,
-        address feeOracle_,
-        address unlockSigner_
+        address validator_
     ) {
         feeCollector = feeCollector_;
         validator = validator_;
-        feeOracle = feeOracle_;
         _setupRole(DEFAULT_ADMIN_ROLE, admin_);
-        unlockSigner = unlockSigner_;
         active = false;
     }
 
@@ -122,9 +114,6 @@ contract Bridge is AccessControl {
         } else if (tokenInfo.tokenType == TokenType.Wrapped) {
             // If wrapped then butn the token
             WrappedToken(tokenAddress).burn(msg.sender, amountToLock);
-        } else if (tokenInfo.tokenType == TokenType.WrappedV0) {
-            // Legacy wrapped tokens burn
-            IWrappedTokenV0(tokenAddress).burn(msg.sender, amountToLock);
         } else {
             revert("Bridge: invalid token type");
         }
@@ -185,37 +174,16 @@ contract Bridge is AccessControl {
 
         // Transform amount form system to token precision
         uint256 amountWithTokenPrecision = fromSystemPrecision(amount, tokenInfo.precision);
-        uint256 fee = 0;
-        if (msg.sender == unlockSigner) {
-            fee = FeeOracle(feeOracle).minFee(tokenAddress);
-            require(amountWithTokenPrecision > fee, "Bridge: amount too small");
-            amountWithTokenPrecision = amountWithTokenPrecision - fee;
-        }
 
         if (tokenInfo.tokenType == TokenType.Base) {
             // If token is WETH - transfer ETH
             payable(recipient).transfer(amountWithTokenPrecision);
-            if (fee > 0) {
-                payable(feeCollector).transfer(fee);
-            }
         } else if (tokenInfo.tokenType == TokenType.Native) {
             // If token is native - transfer the token
             IERC20(tokenAddress).safeTransfer(recipient, amountWithTokenPrecision);
-            if (fee > 0) {
-                IERC20(tokenAddress).safeTransfer(feeCollector, fee);
-            }
         } else if (tokenInfo.tokenType == TokenType.Wrapped) {
             // Else token is wrapped - mint tokens to the user
             WrappedToken(tokenAddress).mint(recipient, amountWithTokenPrecision);
-            if (fee > 0) {
-                WrappedToken(tokenAddress).mint(feeCollector, fee);
-            }
-        } else if (tokenInfo.tokenType == TokenType.WrappedV0) {
-            // Legacy wrapped token
-            IWrappedTokenV0(tokenAddress).mint(recipient, amountWithTokenPrecision);
-            if (fee > 0) {
-                IWrappedTokenV0(tokenAddress).mint(feeCollector, fee);
-            }
         }
 
         emit Received(recipient, tokenAddress, amountWithTokenPrecision, lockId, lockSource);
@@ -264,16 +232,10 @@ contract Bridge is AccessControl {
 
         if (tokenInfo.tokenType == TokenType.Wrapped) {
             WrappedToken(tokenAddress).transferOwnership(newAuthority);
-        } else if (tokenInfo.tokenType == TokenType.WrappedV0) {
-            IWrappedTokenV0(tokenAddress).changeAuthority(newAuthority);
         }
 
         delete tokenInfos[tokenAddress];
         delete tokenSourceMap[tokenSource][tokenSourceAddress];
-    }
-
-    function setFeeOracle(address _feeOracle) external onlyRole(TOKEN_MANAGER) {
-        feeOracle = _feeOracle;
     }
 
     function setFeeCollector(address _feeCollector) external onlyRole(TOKEN_MANAGER) {
@@ -282,10 +244,6 @@ contract Bridge is AccessControl {
 
     function setValidator(address _validator ) external onlyRole(BRIDGE_MANAGER) {
         validator = _validator;
-    }
-
-    function setUnlockSigner(address _unlockSigner ) external onlyRole(BRIDGE_MANAGER) {
-        unlockSigner = _unlockSigner;
     }
 
     function setTokenStatus(address tokenAddress, TokenStatus status)  external onlyRole(TOKEN_MANAGER) {
@@ -317,7 +275,7 @@ contract Bridge is AccessControl {
             "Bridge: unsupported token"
         );
 
-        uint256 fee = FeeOracle(feeOracle).fee(tokenAddress, msg.sender, amount, destination);
+        uint256 fee = getFee(tokenAddress, amount);
 
         require(amount > fee, "Bridge: amount too small");
 
@@ -374,6 +332,28 @@ contract Bridge is AccessControl {
             return amount / (10**(SYSTEM_PRECISION - precision));
         } else {
             return amount;
+        }
+    }
+
+    function setMinFee(address token, uint256 _minFee) public onlyRole(TOKEN_MANAGER) {
+        minFee[token] = _minFee;
+    }
+
+    function setBaseFeeRate(uint256 baseFeeRateBP_) public onlyRole(BRIDGE_MANAGER) {
+        baseFeeRateBP = baseFeeRateBP_;
+    }
+
+    function getFee(address token, uint256 amount) public view returns (uint256) {
+        uint256 _minFee = minFee[token];
+        if (baseFeeRateBP == 0 || amount == 0) {
+            return _minFee;
+        }
+
+        uint256 result = (amount * baseFeeRateBP) / BP;
+        if (_minFee > 0 && result < _minFee) {
+            return _minFee;
+        } else {
+            return result;
         }
     }
 }

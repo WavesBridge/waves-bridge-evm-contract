@@ -1,5 +1,5 @@
 {
-  "name": "bridge-evm-contracts",
+  "name": "waves-bridge-evm-contracts",
   "version": "1.0.0",
   "description": "Allbridge EVM Contracts",
   "repository": "https://github.com/allbridge-io/bridge-evm-contracts.git",
@@ -7,11 +7,15 @@
   "directories": {
     "test": "test"
   },
+  "engines": {
+    "node": "^16"
+  },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.3.1",
+    "@openzeppelin/contracts": "^4.9.6",
     "@openzeppelin/test-helpers": "^0.5.15",
     "@truffle/hdwallet-provider": "^1.5.0",
     "@typechain/truffle-v5": "^5.1.0",
+    "truffle": "^5.4.13",
     "@types/chai": "^4.2.22",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.10.3",
@@ -20,8 +24,7 @@
     "dotenv": "^8.2.0",
     "source-map-support": "^0.5.20",
     "ts-node": "^10.2.1",
-    "typechain": "^5.1.0",
-    "@celo/contractkit": "^1.1.0"
+    "typechain": "^5.1.0"
   },
   "scripts": {
     "test": "truffle test",

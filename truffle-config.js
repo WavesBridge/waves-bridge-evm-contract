@@ -3,16 +3,6 @@ require('source-map-support').install({hookRequire: true});
 require('dotenv').config();
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
-const Kit = require('@celo/contractkit');
-const kit = Kit.newKit('https://forno.celo.org');
-
-// AWAIT WRAPPER FOR ASYNC FUNC
-async function awaitWrapper() {
-    let account = kit.connection.addAccount(process.env.CELO_PK)
-}
-
-awaitWrapper()
-
 module.exports = {
   networks: {
     ganache: {
@@ -111,15 +101,11 @@ module.exports = {
       gas: 6000000,
       gasPrice: 35e9,
       network_id: '*', // eslint-disable-line camelcase
-    },
-    celo: {
-      provider: kit.connection.web3.currentProvider,
-      network_id: '*', // eslint-disable-line camelcase
     }
   },
   compilers: {
     solc: {
-      version: "^0.8",
+      version: "0.8.9",
     }
   }
 };

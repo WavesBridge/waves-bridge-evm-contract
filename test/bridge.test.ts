@@ -1,6 +1,5 @@
 import {
   BridgeInstance,
-  MockFeeOracleInstance,
   MockValidatorInstance,
   TokenInstance,
   WrappedTokenInstance
@@ -13,7 +12,6 @@ const Bridge = artifacts.require('Bridge');
 const WrappedToken = artifacts.require('WrappedToken');
 const Token = artifacts.require('Token');
 const Validator = artifacts.require('MockValidator');
-const FeeOracle = artifacts.require('MockFeeOracle');
 
 const ZERO_BLOCKHAIN_ID = '0x00000000';
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -26,7 +24,6 @@ contract('Bridge: common flow', (accounts) => {
   let bridgeA: BridgeInstance;
   let bridgeB: BridgeInstance;
   let validator: MockValidatorInstance;
-  let feeOracle: MockFeeOracleInstance;
   let token: TokenInstance;
   let wrappedTokenA: WrappedTokenInstance;
   let wrappedTokenB: WrappedTokenInstance;
@@ -43,15 +40,13 @@ contract('Bridge: common flow', (accounts) => {
   const B_NETWORK = 'RPS';
   const B_NETWORK_HEX = padRight(asciiToHex(B_NETWORK), 8);
   const wrappedTokenSourceAddress = web3.eth.accounts.create().address;
-  const unlockSigner = accounts[8];
 
   before(async () => {
     wrappedTokenB = await WrappedToken.new(B_NETWORK_HEX, wrappedTokenSourceAddress, 18, 'Wrapped', 'WRP');
     wrappedTokenA = await WrappedToken.new(A_NETWORK_HEX, wrappedTokenSourceAddress, 18, 'Wrapped', 'WRP');
     validator = await Validator.deployed();
-    feeOracle = await FeeOracle.deployed();
-    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address, unlockSigner);
-    bridgeB = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address, unlockSigner);
+    bridgeA = await Bridge.new(feeCollector, payer, validator.address);
+    bridgeB = await Bridge.new(feeCollector, payer, validator.address);
     token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
     await wrappedTokenA.transferOwnership(bridgeA.address);
@@ -81,8 +76,13 @@ contract('Bridge: common flow', (accounts) => {
   it('Success: activate bridge', async () => {
     await bridgeA.startBridge();
     await bridgeB.startBridge();
+    await bridgeA.setMinFee(token.address, fee)
+    await bridgeA.setMinFee(wrappedTokenB.address, fee)
+    await bridgeA.setMinFee(wrappedTokenA.address, fee)
+    await bridgeB.setMinFee(token.address, fee)
+    await bridgeB.setMinFee(wrappedTokenB.address, fee)
+    await bridgeB.setMinFee(wrappedTokenA.address, fee)
   });
-
 
   it('Fail: Lock (token not found)', async () => {
     await token.approve(bridgeA.address, MAX_UINT256);
@@ -152,7 +152,7 @@ contract('Bridge: common flow', (accounts) => {
   it('Fail: Lock (not approved)', async () => {
     await expectRevert(
       bridgeA.lock('1', token.address, recipientB, B_NETWORK_HEX, amountWithFee),
-      'ERC20: transfer amount exceeds allowance'
+      'ERC20: insufficient allowance'
     );
   });
 
@@ -339,6 +339,13 @@ contract('Bridge: common flow', (accounts) => {
     expect((await wrappedTokenB.balanceOf(newAuthority)).toString()).eq(tokenBalance.toString());
     expect((await wrappedTokenB.owner()).toString()).eq(newAuthority);
   });
+
+  it('getFee', async () => {
+    await bridgeA.setBaseFeeRate(100); // 1%
+    expect((await bridgeA.getFee(token.address, toWei('1'))).toString()).eq(toWei('0.1'));
+    expect((await bridgeA.getFee(token.address, toWei('10'))).toString()).eq(toWei('0.1'));
+    expect((await bridgeA.getFee(token.address, toWei('100'))).toString()).eq(toWei('1'));
+  })
 });
 
 contract('Bridge: WETH', (accounts) => {
@@ -346,7 +353,6 @@ contract('Bridge: WETH', (accounts) => {
   let bridgeA: BridgeInstance;
   let token: TokenInstance;
   let validator: MockValidatorInstance;
-  let feeOracle: MockFeeOracleInstance;
   let WETH: TokenInstance;
   const recipientB = accounts[2];
   const recipientA = accounts[3];
@@ -360,13 +366,11 @@ contract('Bridge: WETH', (accounts) => {
   const B_NETWORK = 'RPS';
   const B_NETWORK_HEX = padRight(asciiToHex(B_NETWORK), 8);
   const oracle = web3.eth.accounts.create();
-  const unlockSigner = accounts[8];
 
   before(async () => {
     WETH = await Token.new('Wrapped ETH', 'WETH', toWei('1000000'));
     validator = await Validator.deployed();
-    feeOracle = await FeeOracle.deployed();
-    bridgeA = await Bridge.new(feeCollector, payer, validator.address, feeOracle.address, unlockSigner);
+    bridgeA = await Bridge.new(feeCollector, payer, validator.address);
     token = await Token.new('token', 'TKN', toWei('1000000'));
     helper = new Helper(bridgeA, token);
   });
@@ -382,6 +386,8 @@ contract('Bridge: WETH', (accounts) => {
 
   it('Success: activate bridge', async () => {
     await bridgeA.startBridge();
+    await bridgeA.setMinFee(WETH.address, fee)
+    await bridgeA.setMinFee(bridgeA.address, fee)
   });
 
   it('Success: Add WETH to A', async () => {
