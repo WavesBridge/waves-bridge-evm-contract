@@ -10,12 +10,10 @@ const Bridge = artifacts.require("Bridge");
 const TokenType = {
   0: 'Base',
   1: 'Native',
-  2: 'WrappedV0',
-  3: 'Wrapped',
+  2: 'Wrapped',
   "Base": 0,
   "Native": 1,
-  "WrappedV0": 2,
-  "Wrapped": 3,
+  "Wrapped": 2,
 }
 
 module.exports = async (callback) => {
@@ -25,7 +23,7 @@ module.exports = async (callback) => {
     const tokenSource = await question('Token source', 'KVN');
     const tokenSourceAddress = await question('Token source address (hex 0x...)', '');
     const tokenLocalAddress = await question('Token local address (hex 0x...)', '');
-    const tokenType = await question('Token type (Base, Native, WrappedV0, Wrapped)', '');
+    const tokenType = await question('Token type (Base, Native, Wrapped)', '');
     if (TokenType[tokenType] == null) {
       throw new Error(`Invalid token type ${tokenType}`);
     }

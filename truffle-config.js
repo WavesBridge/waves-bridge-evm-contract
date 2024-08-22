@@ -32,6 +32,17 @@ module.exports = {
       gas: 8000000,
       gasPrice: 10e9,
     },
+    holesky: {
+      provider: () => {
+        return new HDWalletProvider({
+          privateKeys: [process.env.HOLESKY_PK],
+          providerOrUrl: 'https://ethereum-holesky.publicnode.com'
+        });
+      },
+      network_id: '17000',
+      gas: 8000000,
+      gasPrice: 10e9,
+    },
     kovan: {
       provider: () => {
         return new HDWalletProvider({
