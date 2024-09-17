@@ -12,18 +12,16 @@ program
   .requiredOption('-ts, --token-source <value>', 'Token source')
   .requiredOption('-tsa, --token-source-address <value>', 'Token source address (hex 0x...)')
   .requiredOption('-tla, --token-local-address <value>', 'Token local address (hex 0x...)')
-  .requiredOption('-tt, --token-type <value>', 'Token type (Base, Native, WrappedV0, Wrapped)')
+  .requiredOption('-tt, --token-type <value>', 'Token type (Base, Native, Wrapped)')
   .option('--network <value>', 'Network')
 
 const TokenType = {
   0: 'Base',
   1: 'Native',
-  2: 'WrappedV0',
-  3: 'Wrapped',
+  2: 'Wrapped',
   "Base": 0,
   "Native": 1,
-  "WrappedV0": 2,
-  "Wrapped": 3,
+  "Wrapped": 2,
 }
 
 module.exports = async (callback) => {
