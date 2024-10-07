@@ -63,7 +63,7 @@ module.exports = {
           });
       },
       gas: 400000,
-      gasPrice: 150e9,
+      gasPrice: 35e9,
       network_id: 1
     },
     bsc: {
@@ -75,7 +75,7 @@ module.exports = {
           });
       },
       gas: 8000000,
-      gasPrice: 10e9,
+      gasPrice: 2e9,
       network_id: '56', // eslint-disable-line camelcase
     },
     heco: {
