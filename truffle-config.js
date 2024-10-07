@@ -63,7 +63,7 @@ module.exports = {
           });
       },
       gas: 400000,
-      gasPrice: 35e9,
+      gasPrice: 63e9,
       network_id: 1
     },
     bsc: {
