@@ -75,7 +75,7 @@ module.exports = {
           });
       },
       gas: 8000000,
-      gasPrice: 2e9,
+      gasPrice: 1e9,
       network_id: '56', // eslint-disable-line camelcase
     },
     heco: {
