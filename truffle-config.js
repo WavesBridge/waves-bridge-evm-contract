@@ -78,6 +78,16 @@ module.exports = {
       gasPrice: 1e9,
       network_id: '56', // eslint-disable-line camelcase
     },
+    unit: {
+      provider: function() {
+        return new HDWalletProvider({
+          privateKeys: [process.env.UNIT_PK],
+          providerOrUrl: 'https://rpc.unit0.dev'
+        });
+      },
+      gas: 600000,
+      network_id: 88811, // eslint-disable-line camelcase
+    },
     heco: {
       provider: function() {
         const url = 'https://http-mainnet-node.huobichain.com';
