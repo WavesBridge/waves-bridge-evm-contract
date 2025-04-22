@@ -4,7 +4,7 @@ const fs = require('fs');
 
 
 const {question, pressAnyKey} = require("./_utils");
-const Bridge = artifacts.require("Unit0BridgeProxy");
+const Bridge = artifacts.require("UnitBridgeProxy");
 
 module.exports = async (callback) => {
   try {

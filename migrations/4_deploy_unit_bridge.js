@@ -1,4 +1,4 @@
-const Unit0BridgeProxy = artifacts.require("Unit0BridgeProxy");
+const Unit0BridgeProxy = artifacts.require("UnitBridgeProxy");
 
 module.exports = async function(deployer, network, addresses) {
   if (network === "test") {

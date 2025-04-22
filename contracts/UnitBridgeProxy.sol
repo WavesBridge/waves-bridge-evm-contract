@@ -10,7 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 pragma experimental ABIEncoderV2;
 
-contract Unit0BridgeProxy is Ownable {
+contract UnitBridgeProxy is Ownable {
     using SafeERC20 for IERC20;
     uint256 public baseFeeRateBP;
     uint256 public constant BP = 10000;
@@ -29,8 +29,8 @@ contract Unit0BridgeProxy is Ownable {
 
     // Structure for token info
     struct TokenInfo {
-        bytes4 tokenSource;
         bytes32 tokenSourceAddress;
+        bytes4 tokenSource;
         uint8 precision;
         bool disableFee;
         TokenType tokenType;
@@ -124,7 +124,6 @@ contract Unit0BridgeProxy is Ownable {
 
     // Method to add token that already exist in the current blockchain
     // Fee has to be in system precision
-    // If token is wrapped, but it was deployed manually, isManualWrapped must be true
     function addToken(
         bytes4 tokenSource,
         bytes32 tokenSourceAddress,
@@ -141,8 +140,8 @@ contract Unit0BridgeProxy is Ownable {
 
         tokenSourceMap[tokenSource][tokenSourceAddress] = nativeTokenAddress;
         tokenInfos[nativeTokenAddress] = TokenInfo(
-            tokenSource,
             tokenSourceAddress,
+            tokenSource,
             precision,
             false,
             tokenType);
