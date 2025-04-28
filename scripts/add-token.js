@@ -10,7 +10,7 @@ const Bridge = artifacts.require("Bridge");
 const TokenType = {
   0: 'Base',
   1: 'Native',
-  2: 'Wrapped',
+  2: 'Wrapped', // not for Unit0
   "Base": 0,
   "Native": 1,
   "Wrapped": 2,
