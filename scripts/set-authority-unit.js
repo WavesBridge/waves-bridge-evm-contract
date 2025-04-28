@@ -10,7 +10,7 @@ module.exports = async (callback) => {
     const bridge = await Bridge.at(bridgeAddress);
     const address = await question('Authority user address', sender);
 
-    console.log(`You are going to set ${authorityType} authority to ${address} for bridge ${bridgeAddress}`)
+    console.log(`You are going to set authority to ${address} for unit bridge ${bridgeAddress}`)
     await pressAnyKey()
     console.log(`Sending...`);
     const tx = await bridge.transferOwnership(address);
