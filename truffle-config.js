@@ -62,8 +62,8 @@ module.exports = {
             providerOrUrl: url
           });
       },
-      gas: 400000,
-      gasPrice: 13e9,
+      gas: 3000000, //  token 3000000  normal 400000
+      gasPrice: 1e9,
       network_id: 1
     },
     bsc: {
@@ -85,7 +85,7 @@ module.exports = {
           providerOrUrl: 'https://rpc.unit0.dev'
         });
       },
-      gas: 600000,
+      gas: 6000000,
       network_id: 88811, // eslint-disable-line camelcase
     },
     heco: {
@@ -102,15 +102,39 @@ module.exports = {
     },
     polygon: {
       provider: function() {
-        const url = 'https://rpc-mainnet.maticvigil.com/'
+        const url = 'https://polygon-rpc.com'
         return new HDWalletProvider({
             privateKeys: [process.env.POLYGON_PK],
             providerOrUrl: url
           });
       },
       gas: 8000000,
-      gasPrice: 50e9,
+      gasPrice: 45e9,
       network_id: '137', // eslint-disable-line camelcase
+    },
+    arbitrum: {
+      provider: function() {
+        const url = 'https://arbitrum-mainnet.infura.io/v3/21efbbea9e584a69884c6d62108b39b5'
+        return new HDWalletProvider({
+            privateKeys: [process.env.ARB_PK],
+            providerOrUrl: url
+          });
+      },
+      gas: 8000000,
+      gasPrice: 1e8,
+      network_id: '42161', // eslint-disable-line camelcase
+    },
+    bas: {
+      provider: function() {
+        const url = 'https://base-mainnet.infura.io/v3/21efbbea9e584a69884c6d62108b39b5'
+        return new HDWalletProvider({
+            privateKeys: [process.env.BAS_PK],
+            providerOrUrl: url
+          });
+      },
+      gas: 3000000,
+      gasPrice: 1e9,
+      network_id: '8453', // eslint-disable-line camelcase
     },
     avalanche: {
       provider: function() {
